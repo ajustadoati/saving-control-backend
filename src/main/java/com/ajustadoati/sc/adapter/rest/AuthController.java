@@ -1,5 +1,6 @@
 package com.ajustadoati.sc.adapter.rest;
 
+import com.ajustadoati.sc.adapter.rest.dto.response.TokenDto;
 import com.ajustadoati.sc.adapter.rest.request.LoginRequest;
 import com.ajustadoati.sc.application.service.AuthService;
 import lombok.extern.slf4j.Slf4j;
@@ -23,9 +24,9 @@ public class AuthController {
   private AuthService authService;
 
   @PostMapping("/login")
-  public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+  public ResponseEntity<TokenDto> authenticateUser(@RequestBody LoginRequest loginRequest) {
     log.info("Executing post");
     String token = authService.login(loginRequest.username(), loginRequest.password());
-    return ResponseEntity.ok(token);
+    return ResponseEntity.ok(new TokenDto(token));
   }
 }

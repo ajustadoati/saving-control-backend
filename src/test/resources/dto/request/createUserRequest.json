@@ -1,0 +1,8 @@
+{
+    "firstName": "John",
+    "lastName": "Doe",
+    "numberId":"14447876",
+    "mobileNumber":"2719806",
+    "email": "johndoe@example.com",
+    "roles":  ["Admin"]
+}

@@ -1,31 +1,35 @@
 
 package com.ajustadoati.sc.domain;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "associate")
+@Table(name = "user_associate")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Associate {
+public class UserAssociate {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "associate_id")
   private Integer associateId;
 
-  @ManyToOne
-  @JoinColumn(name = "main_associate_id", nullable = false)
-  private User mainAssociate;
 
-  @ManyToOne
-  @JoinColumn(name = "guess_associate_id", nullable = false)
-  private User guessAssociate;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
+
+
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "user_associate_id", nullable = false)
+  private User userAssociate;
 
   @Column(name = "relationship", length = 50)
   private String relationship;
+
 }
 

@@ -1,4 +1,4 @@
-package com.ajustadoati.sc.adapter.rest;
+package com.ajustadoati.sc.adapter.rest.filter;
 
 import com.ajustadoati.sc.application.service.JwtTokenProvider;
 import jakarta.servlet.FilterChain;
@@ -39,7 +39,6 @@ public class JwtTokenFilter extends OncePerRequestFilter {
       if (jwtTokenProvider.validateToken(token)) {
         String username = jwtTokenProvider.getUsernameFromToken(token);
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-        var roles = jwtTokenProvider.getRolesFromToken(token);
         UsernamePasswordAuthenticationToken authentication =
             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

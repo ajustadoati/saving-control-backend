@@ -1,31 +1,34 @@
+
 package com.ajustadoati.sc.domain;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
 @Entity
-@Table(name = "saving")
+@Table(name = "default_payment")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Saving {
+public class DefaultPayment {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "saving_id")
-  private Integer savingId;
+  private Integer id;
 
   @ManyToOne
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  @Column(name = "saving_date")
-  private LocalDate savingDate;
+  private String paymentName;
 
-  @Column(name = "amount", precision = 10)
   private BigDecimal amount;
 }
+

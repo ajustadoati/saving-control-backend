@@ -7,7 +7,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,16 +23,15 @@ public class AuthService {
   private UserDetailsService userDetailsService;
 
   public String login(String username, String password) {
-    // Crear el token de autenticación con las credenciales
     var authToken = new UsernamePasswordAuthenticationToken(username, password);
 
-    // Autenticar al usuario
+
     Authentication authentication = authenticationManager.authenticate(authToken);
 
-    // Cargar los detalles del usuario
+
     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-    // Generar el token JWT
+
     return jwtTokenProvider.createToken(userDetails.getUsername(),
         userDetails.getAuthorities().stream().map(auth -> auth.getAuthority()).toList());
   }

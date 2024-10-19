@@ -3,7 +3,8 @@ package com.ajustadoati.sc.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -19,26 +20,21 @@ public class User {
   @Column(name = "user_id")
   private Integer userId;
 
-  @Column(name = "first_name", length = 100)
   private String firstName;
 
-  @Column(name = "last_name", length = 100)
   private String lastName;
 
-  @Column(name = "number_id", length = 20)
   private String numberId;
 
-  @Column(name = "mobile_number", length = 20)
   private String mobileNumber;
 
-  @Column(name = "email", length = 100)
   private String email;
 
-  @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-  private Timestamp createdAt;
+  private Instant createdAt;
 
   private String password;
 
+  private String company;
 
   @ManyToMany(fetch = FetchType.EAGER)
   @JoinTable(
@@ -46,4 +42,11 @@ public class User {
       joinColumns = @JoinColumn(name = "user_id"),
       inverseJoinColumns = @JoinColumn(name = "role_id"))
   private Set<Role> roles;
+
+  @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+  private List<UserAssociate> associates;
+
+  @OneToMany(mappedBy = "user")
+  private List<DefaultPayment> defaultPayments;
+
 }
