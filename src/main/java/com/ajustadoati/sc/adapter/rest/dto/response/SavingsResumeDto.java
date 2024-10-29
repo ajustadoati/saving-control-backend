@@ -10,8 +10,9 @@ import java.math.BigDecimal;
 @Data
 @AllArgsConstructor
 @Builder
-public class DefaultPaymentDto {
-  private String paymentName;
+public class SavingsResumeDto {
+  private BigDecimal total;
 
-  private BigDecimal amount;
+  private Long totalUsers;
+
 }

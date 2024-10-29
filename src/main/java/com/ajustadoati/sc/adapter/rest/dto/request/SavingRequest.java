@@ -17,6 +17,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SavingRequest {
+  private Integer associateId;
 
   private LocalDate savingDate;
 

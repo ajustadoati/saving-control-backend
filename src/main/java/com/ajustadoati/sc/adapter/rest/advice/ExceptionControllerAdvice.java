@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.jpa.JpaObjectRetrievalFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -27,6 +28,8 @@ import java.util.Map;
 public class ExceptionControllerAdvice {
 
   private static final String VALIDATION_REQUEST_FAILED_TITLE = "User Request validation failed";
+
+  public static final String NOT_FOUND_TITLE = "Not Found";
 
   /**
    * Handles a case when any mass action field is null
@@ -55,6 +58,37 @@ public class ExceptionControllerAdvice {
 
     return handle(ex, request, HttpStatus.BAD_REQUEST, VALIDATION_REQUEST_FAILED_TITLE,
         formattedErrors);
+  }
+
+  /**
+   * Handles a case when mass action is not found
+   *
+   * @param ex      {@link JpaObjectRetrievalFailureException}
+   * @param request input request
+   * @return {@link HttpEntity} containing standard body in case of errors.
+   */
+  @ExceptionHandler(JpaObjectRetrievalFailureException.class)
+  public HttpEntity<ErrorResponse> handleMassActionNotFoundException(
+      JpaObjectRetrievalFailureException ex, HttpServletRequest request) {
+
+    return handle(ex, request, HttpStatus.NOT_FOUND, NOT_FOUND_TITLE, ex
+        .getCause()
+        .getMessage());
+  }
+
+  /**
+   * Handles a case when property for sort in pageable request is unknown
+   *
+   * @param ex      {@link IllegalArgumentException}
+   * @param request input request
+   * @return {@link HttpEntity} containing standard body in case of errors.
+   */
+  @ExceptionHandler(IllegalArgumentException.class)
+  public HttpEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex,
+      HttpServletRequest request) {
+
+    return handle(ex, request, HttpStatus.BAD_REQUEST, VALIDATION_REQUEST_FAILED_TITLE,
+        ex.getMessage());
   }
 
   private HttpEntity<ErrorResponse> handle(Throwable e, HttpServletRequest request,

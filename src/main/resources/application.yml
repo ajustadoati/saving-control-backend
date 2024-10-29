@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${DATASOURCE_URL:jdbc:mysql://localhost:3306/calch}
-    username: ${DATASOURCE_USERNAME:xxx}
-    password: ${DATASOURCE_PASSWORD:xxx.}
+    url: ${DATASOURCE_URL:jdbc:mysql://ajustadoati.com:3307/calch}
+    username: ${DATASOURCE_USERNAME:root}
+    password: ${DATASOURCE_PASSWORD:Coki447.}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hibernate:
       ddl-auto: none
@@ -11,8 +11,11 @@ spring:
       hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
     initialization-mode: always
     hikari:
-      idle-timeout: 600000
-      connection-timeout: 30000
+      minimum-idle: 5
+      maximum-pool-size: 30
+      idle-timeout: 60000
+      max-lifetime: 90000
+      connection-timeout: 50000
 
 jwt:
   secretKey: vj7/hMQe+EryZ/3V4O8MjT6Vib1FEivj1xwxIZTam4M=

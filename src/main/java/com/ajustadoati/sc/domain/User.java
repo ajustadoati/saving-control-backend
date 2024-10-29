@@ -49,4 +49,7 @@ public class User {
   @OneToMany(mappedBy = "user")
   private List<DefaultPayment> defaultPayments;
 
+  @OneToMany(mappedBy = "user")
+  private List<Saving> savings;
+
 }

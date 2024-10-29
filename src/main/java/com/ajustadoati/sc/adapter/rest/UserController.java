@@ -6,6 +6,7 @@ import com.ajustadoati.sc.adapter.rest.dto.request.CreateUserRequest;
 import com.ajustadoati.sc.application.service.UserService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.PagedModel;
@@ -17,7 +18,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/users")
@@ -62,6 +66,19 @@ public class UserController {
     PagedModel<EntityModel<UserDto>> pagedModel =
         userModelAssembler.toPagedModel(users, pagedResourcesAssembler);
 
+    return ResponseEntity.ok(pagedModel);
+  }
+
+  @GetMapping("/savings")
+  public ResponseEntity<PagedModel<EntityModel<UserDto>>> getUsersWithSavings(
+      @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+      @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+      Pageable pageable) {
+
+    var usersWithSavings = userService.getUsersWithSavingsByDateRange(startDate, endDate, pageable);
+
+    PagedModel<EntityModel<UserDto>> pagedModel =
+        userModelAssembler.toPagedModel(usersWithSavings, pagedResourcesAssembler);
     return ResponseEntity.ok(pagedModel);
   }
 

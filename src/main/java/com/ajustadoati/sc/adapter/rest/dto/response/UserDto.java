@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import org.springframework.hateoas.server.core.Relation;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -21,5 +22,7 @@ public class UserDto{
   private String company;
   private List<AssociateDto> associates;
   private List<DefaultPaymentDto> defaultPayments;
+  private List<SavingDto> savings;
+  private BigDecimal totalSavings;
 
 }
