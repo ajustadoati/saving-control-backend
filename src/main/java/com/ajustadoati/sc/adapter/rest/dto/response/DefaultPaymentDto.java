@@ -11,6 +11,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class DefaultPaymentDto {
+
+  private Integer id;
+
   private String paymentName;
 
   private BigDecimal amount;

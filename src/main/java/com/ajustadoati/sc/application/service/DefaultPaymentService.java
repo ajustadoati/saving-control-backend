@@ -54,4 +54,12 @@ public class DefaultPaymentService {
     return defaultPaymentRepository.getAllByUser(user, pageable);
   }
 
+  public void deleteDefaultPayment(Integer userId, Integer id){
+    userRepository
+        .findById(userId)
+        .orElseThrow();
+
+    defaultPaymentRepository.deleteById(id);
+  }
+
 }
