@@ -38,6 +38,7 @@ public class SecurityConfig{
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/auth/**").permitAll()
             .requestMatchers("/api/users/**").hasRole("ADMIN")
+            .requestMatchers("/api/products/**").hasRole("ADMIN")
             .requestMatchers("/api/associates").hasAnyRole("USER")
             .anyRequest().authenticated()
         )

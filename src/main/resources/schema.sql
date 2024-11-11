@@ -60,6 +60,11 @@ CREATE TABLE loan_type (
     loan_type_name VARCHAR(50) NOT NULL
 );
 
+CREATE TABLE product (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL
+);
+
 CREATE TABLE loan (
     loan_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
