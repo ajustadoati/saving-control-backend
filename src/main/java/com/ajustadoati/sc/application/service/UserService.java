@@ -1,11 +1,15 @@
 package com.ajustadoati.sc.application.service;
 
+import com.ajustadoati.sc.adapter.rest.advice.AssociationAlreadyExistsException;
+import com.ajustadoati.sc.adapter.rest.dto.request.AssociateRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.CreateUserRequest;
+import com.ajustadoati.sc.adapter.rest.repository.AssociateRepository;
 import com.ajustadoati.sc.adapter.rest.repository.RoleRepository;
 import com.ajustadoati.sc.adapter.rest.repository.SavingRepository;
 import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
 import com.ajustadoati.sc.domain.Saving;
 import com.ajustadoati.sc.domain.User;
+import com.ajustadoati.sc.domain.UserAssociate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -30,12 +34,17 @@ public class UserService {
 
   private final SavingRepository savingRepository;
 
+  private final AssociateRepository associateRepository;
+
   public UserService(UserRepository userRepository, RoleRepository roleRepository,
-      SavingRepository savingRepository) {
+    SavingRepository savingRepository, AssociateRepository associateRepository) {
     this.userRepository = userRepository;
     this.roleRepository = roleRepository;
     this.savingRepository = savingRepository;
+    this.associateRepository = associateRepository;
   }
+
+
 
   public User createUser(CreateUserRequest createUserRequest) {
 
@@ -54,49 +63,51 @@ public class UserService {
   }
 
   public Page<User> getUsersWithSavingsByDateRange(LocalDate startDate, LocalDate endDate,
-      Pageable pageable) {
+    Pageable pageable) {
     Page<User> users = userRepository.findAll(pageable);
 
     List<User> userList = users
-        .getContent()
-        .stream()
-        .map(user -> {
-          List<Saving> filteredSavings =
-              savingRepository.findByUserAndSavingDateBetween(user, startDate,
-                  endDate);
-          user.setSavings(filteredSavings);
+      .getContent()
+      .stream()
+      .map(user -> {
+        List<Saving> filteredSavings =
+          savingRepository.findByUserAndSavingDateBetween(user, startDate,
+            endDate);
+        user.setSavings(filteredSavings);
 
-          return User
-              .builder()
-              .userId(user.getUserId())
-              .firstName(user.getFirstName())
-              .lastName(user.getLastName())
-              .numberId(user.getNumberId())
-              .email(user.getEmail())
-              .mobileNumber(user.getMobileNumber())
-              .company(user.getCompany())
-              .savings(filteredSavings)
-              .build();
-        })
-        .collect(Collectors.toList());
+        return User
+          .builder()
+          .userId(user.getUserId())
+          .firstName(user.getFirstName())
+          .lastName(user.getLastName())
+          .numberId(user.getNumberId())
+          .email(user.getEmail())
+          .mobileNumber(user.getMobileNumber())
+          .company(user.getCompany())
+          .savings(filteredSavings)
+          .build();
+      })
+      .collect(Collectors.toList());
 
     return new PageImpl<>(userList, pageable, users.getTotalElements());
   }
 
   public User getUserById(Integer id) {
     return userRepository
-        .findById(id)
-        .orElseThrow();
+      .findById(id)
+      .orElseThrow();
   }
 
   public User getUserByNumberId(String numberId) {
     return userRepository
-        .findByNumberId(numberId)
-        .orElseThrow();
+      .findByNumberId(numberId)
+      .orElseThrow();
   }
 
   public Page<User> getAllUsers(Pageable pageable) {
     return userRepository.findAll(pageable);
   }
+
+
 
 }

@@ -91,6 +91,21 @@ public class ExceptionControllerAdvice {
         ex.getMessage());
   }
 
+  /**
+   * Handles a case when property for sort in pageable request is unknown
+   *
+   * @param ex      {@link AssociationAlreadyExistsException}
+   * @param request input request
+   * @return {@link HttpEntity} containing standard body in case of errors.
+   */
+  @ExceptionHandler(AssociationAlreadyExistsException.class)
+  public HttpEntity<ErrorResponse> handleAssociationAlreadyExistsException(AssociationAlreadyExistsException ex,
+    HttpServletRequest request) {
+
+    return handle(ex, request, HttpStatus.BAD_REQUEST, VALIDATION_REQUEST_FAILED_TITLE,
+      ex.getMessage());
+  }
+
   private HttpEntity<ErrorResponse> handle(Throwable e, HttpServletRequest request,
       HttpStatus httpStatus, String title, String detail) {
     log.error(e.getMessage());

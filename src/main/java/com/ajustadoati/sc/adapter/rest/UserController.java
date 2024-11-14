@@ -1,9 +1,11 @@
 package com.ajustadoati.sc.adapter.rest;
 
 import com.ajustadoati.sc.adapter.rest.assemblers.UserModelAssembler;
+import com.ajustadoati.sc.adapter.rest.dto.request.AssociateRequest;
 import com.ajustadoati.sc.adapter.rest.dto.response.UserDto;
 import com.ajustadoati.sc.adapter.rest.dto.request.CreateUserRequest;
 import com.ajustadoati.sc.application.service.UserService;
+import com.ajustadoati.sc.domain.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -44,7 +46,7 @@ public class UserController {
   public ResponseEntity<EntityModel<UserDto>> createUser(
       @RequestBody @Validated CreateUserRequest createUserRequest) {
     var user = userService.createUser(createUserRequest);
-    return new ResponseEntity(userModelAssembler.toModel(user), HttpStatus.CREATED);
+    return new ResponseEntity<>(userModelAssembler.toModel(user), HttpStatus.CREATED);
   }
 
   @GetMapping("/{id}")
