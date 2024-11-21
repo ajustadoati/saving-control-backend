@@ -52,4 +52,6 @@ public class User {
   @OneToMany(mappedBy = "user")
   private List<Saving> savings;
 
+  @OneToMany(mappedBy = "user")
+  private List<ContributionPayment> contributionPayments;
 }

@@ -102,18 +102,28 @@ CREATE TABLE funds (
 
 CREATE TABLE contribution_type (
     contribution_type_id INT AUTO_INCREMENT PRIMARY KEY,
-    contribution_type_name VARCHAR(50) NOT NULL
+    contribution_type_name VARCHAR(50) NOT NULL UNIQUE
 );
 
-CREATE TABLE special_contribution (
+CREATE TABLE contribution (
     contribution_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    contribution_type_id INT,
-    amount DECIMAL(10, 2),
-    contribution_date DATE,
-    FOREIGN KEY (contribution_type_id) REFERENCES contribution_type(contribution_type_id),
-    FOREIGN KEY (user_id) REFERENCES user(user_id)
+    contribution_type_id INT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    contribution_date DATE NOT NULL,
+    description VARCHAR(255),
+    FOREIGN KEY (contribution_type_id) REFERENCES contribution_type(contribution_type_id)
 );
+
+CREATE TABLE contribution_payment (
+    contribution_payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    contribution_id INT NOT NULL,
+    payment_date DATE NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user(user_id),
+    FOREIGN KEY (contribution_id) REFERENCES contribution(contribution_id)
+);
+
 
 INSERT INTO `role` (role_name) VALUES
 	 ('ADMIN'),
