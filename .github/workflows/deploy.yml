@@ -49,6 +49,10 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ajustadoati.com >> ~/.ssh/known_hosts
 
+      - name: Probar conexión SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no ajustado@ajustadoati.com "echo 'Conexión SSH exitosa'"
+
       - name: Deploy Application
         run: |
           ssh -o StrictHostKeyChecking=no ajustado@ajustadoati.com << 'EOF'
