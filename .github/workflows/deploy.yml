@@ -60,7 +60,7 @@ jobs:
             docker stop app || true
             docker rm app || true
             docker run -d --name app \
-              -p 8080:8080 \
+              -p 8083:8080 \
               -e DATASOURCE_USERNAME="${{ secrets.DATASOURCE_USERNAME }}" \
               -e DATASOURCE_PASSWORD="${{ secrets.DATASOURCE_PASSWORD }}" \
               -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
