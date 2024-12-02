@@ -42,17 +42,23 @@ jobs:
           docker push ajustadoati/calch-be:latest
 
       # 6. Despliega en el servidor automáticamente
-      - name: Deploy to Server
+      - name: Configurar clave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ajustadoati.com >> ~/.ssh/known_hosts
+
+      - name: Deploy Application
         run: |
           ssh -o StrictHostKeyChecking=no ajustado@ajustadoati.com << 'EOF'
-          docker pull ajustadoati/calch-be:latest
-          docker stop app || true
-          docker rm app || true
-          docker run -d --name app -p 8083:8080 \
-            -e DATASOURCE_USERNAME=${{ secrets.DATASOURCE_USERNAME }} \
-            -e DATASOURCE_PASSWORD=${{ secrets.DATASOURCE_PASSWORD }} \
-            -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
-            ajustadoati/calch-be:latest
+            docker pull ajustadoati/calch-be:latest
+            docker stop app || true
+            docker rm app || true
+            docker run -d --name app \
+              -p 8080:8080 \
+              -e DATASOURCE_USERNAME="${{ secrets.DATASOURCE_USERNAME }}" \
+              -e DATASOURCE_PASSWORD="${{ secrets.DATASOURCE_PASSWORD }}" \
+              -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
+              ajustadoati/calch-be:latest
           EOF
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
