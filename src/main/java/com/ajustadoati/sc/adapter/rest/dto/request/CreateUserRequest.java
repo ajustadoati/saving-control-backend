@@ -29,6 +29,8 @@ public class CreateUserRequest {
 
   private String mobileNumber;
 
+  private String company;
+
   @Email
   private String email;
 

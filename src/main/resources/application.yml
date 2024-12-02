@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${DATASOURCE_URL:jdbc:ssss}
-    username: ${DATASOURCE_USERNAME:sss}
-    password: ${DATASOURCE_PASSWORD:sss.}
+    url: ${DATASOURCE_URL:jdbc:mysql://ajustadoati.com:3307/calch}
+    username: ${DATASOURCE_USERNAME}
+    password: ${DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hibernate:
       ddl-auto: none
@@ -18,7 +18,7 @@ spring:
       connection-timeout: 50000
 
 jwt:
-  secretKey: vj7/hMQe+EryZ/3V4O8MjT6Vib1FEivj1xwxIZTam4M=
+  secretKey: ${SECRET_KEY}
 
 logging:
   level:

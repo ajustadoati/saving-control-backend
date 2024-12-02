@@ -38,8 +38,9 @@ public class SecurityConfig{
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/auth/**").permitAll()
             .requestMatchers("/api/users/**").hasRole("ADMIN")
+            .requestMatchers("/api/rasa/**").permitAll()
             .requestMatchers("/api/products/**").hasRole("ADMIN")
-            .requestMatchers("/api/payments/**").hasRole("ADMIN")
+            .requestMatchers("/api/payments/**").permitAll()
             .requestMatchers("/api/contributionTypes/**").hasRole("ADMIN")
             .requestMatchers("/api/contributions/**").hasRole("ADMIN")
             .requestMatchers("/api/associates").hasAnyRole("USER")
