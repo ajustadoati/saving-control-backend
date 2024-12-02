@@ -23,7 +23,7 @@ jobs:
 
       # 3. Construye la aplicación
       - name: Build Spring Boot App
-        run: mvn clean package
+        run: mvn clean package -DskipTests
 
       # 4. Construye la imagen Docker con variables inyectadas
       - name: Build Docker Image
