@@ -1,0 +1,7 @@
+com/ajustadoati/sc/config/TestSecurityConfig.class
+com/ajustadoati/sc/adapter/rest/UserControllerTest$TestConfig.class
+com/ajustadoati/sc/util/TestFileUtils.class
+com/ajustadoati/sc/adapter/rest/UserControllerTest.class
+com/ajustadoati/sc/TestcontainersConfiguration.class
+com/ajustadoati/sc/TestScApplication.class
+com/ajustadoati/sc/ScApplicationTests.class

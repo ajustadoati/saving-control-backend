@@ -25,6 +25,9 @@ jobs:
       - name: Build Spring Boot App
         run: mvn clean package -DskipTests
 
+      - name: Verificar archivo generado
+        run: ls -la target/
+
       # 4. Construye la imagen Docker con variables inyectadas
       - name: Build Docker Image
         run: |
