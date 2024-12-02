@@ -2,7 +2,7 @@ FROM eclipse-temurin:21-jdk-alpine
 
 WORKDIR /app
 
-COPY target/sc-1.0.0.jar app.jar
+COPY target/sc-0.0.1.jar app.jar
 
 EXPOSE 8080
 
