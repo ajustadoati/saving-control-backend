@@ -2,10 +2,10 @@ package com.ajustadoati.sc.application.service;
 
 
 import com.ajustadoati.sc.adapter.rest.dto.request.ContributionPaymentRequest;
-import com.ajustadoati.sc.adapter.rest.dto.request.ContributionRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentDetail;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.SavingRequest;
+import com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse.PaymentStatus;
 import com.ajustadoati.sc.adapter.rest.repository.ContributionTypeRepository;
@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -43,21 +42,33 @@ public class PaymentService {
     List<ContributionPaymentRequest> contributionPaymentRequests = new ArrayList<>();
 
     for (PaymentDetail paymentDetail : request.getPayments()) {
-      PaymentResponse.PaymentStatus status = new PaymentResponse.PaymentStatus();
-      status.setPaymentType(paymentDetail.getPaymentType());
+      var status = new PaymentResponse.PaymentStatus();
+      status.setPaymentType(PaymentTypeEnum.fromDescription(paymentDetail.getPaymentType()));
       status.setReferenceId(paymentDetail.getReferenceId());
       status.setAmount(paymentDetail.getAmount());
 
       try {
-        switch (paymentDetail.getPaymentType().toUpperCase()) {
-          case "CONTRIBUTION":
+        switch (PaymentTypeEnum.fromDescription(paymentDetail.getPaymentType())) {
+          case ADMINISTRATIVE, SHARED_CONTRIBUTION:
             contributionPaymentRequests.add(
               getContributionPaymentRequest(user.getUserId(), paymentDetail, request.getDate()));
             break;
 
-          case "SAVING":
+          case SAVING, PARTNER_SAVING, CHILDRENS_SAVING:
             savingRequests.add(
               getSavingRequest(user.getUserId(), paymentDetail, request.getDate()));
+            break;
+
+          case SUPPLIES:
+            processSuppliesPayment(user.getUserId(), paymentDetail, request.getDate());
+            break;
+
+          case LOAN_INTEREST_PAYMENT:
+            processLoanInterestPayment(user.getUserId(), paymentDetail, request.getDate());
+            break;
+
+          case LOAN_PAYMENT:
+            processLoanRepayment(user.getUserId(), paymentDetail, request.getDate());
             break;
 
           default:
@@ -91,6 +102,15 @@ public class PaymentService {
     return response;
   }
 
+  private void processLoanRepayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
+  }
+
+  private void processLoanInterestPayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
+  }
+
+  private void processSuppliesPayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
+  }
+
   private ContributionPaymentRequest getContributionPaymentRequest(Integer userId,
     PaymentDetail paymentDetail, LocalDate date) {
 
@@ -105,7 +125,7 @@ public class PaymentService {
 
   private SavingRequest getSavingRequest(Integer userId, PaymentDetail paymentDetail,
     LocalDate date) {
-    SavingRequest saving = new SavingRequest();
+    var saving = new SavingRequest();
     if (Objects.nonNull(paymentDetail.getUserId())) {
       saving.setAssociateId(paymentDetail.getUserId());
     }

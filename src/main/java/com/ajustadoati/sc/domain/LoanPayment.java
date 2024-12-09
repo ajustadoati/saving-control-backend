@@ -3,6 +3,7 @@ package com.ajustadoati.sc.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -25,7 +26,11 @@ public class LoanPayment {
   @Column(name = "payment_date", nullable = false)
   private LocalDate paymentDate;
 
+  @ManyToOne
+  @JoinColumn(name = "payment_type_id", nullable = false)
+  private LoanPaymentType paymentType;
+
   @Column(name = "amount", nullable = false, precision = 10)
-  private Double amount;
+  private BigDecimal amount;
 }
 

@@ -1,5 +1,6 @@
 package com.ajustadoati.sc.adapter.rest.dto.response;
 
+import com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -13,7 +14,7 @@ public class PaymentResponse {
 
   @Data
   public static class PaymentStatus {
-    private String paymentType;
+    private PaymentTypeEnum paymentType;
     private Integer referenceId;
     private BigDecimal amount;
     private String status; // SUCCESS, FAILURE

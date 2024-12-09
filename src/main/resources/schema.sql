@@ -60,18 +60,14 @@ CREATE TABLE loan_type (
     loan_type_name VARCHAR(50) NOT NULL
 );
 
-CREATE TABLE product (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL
-);
-
 CREATE TABLE loan (
     loan_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
     loan_amount DECIMAL(10, 2) NOT NULL,
     interest_rate DECIMAL(5, 2) NOT NULL,
     loan_balance DECIMAL(10, 2) NOT NULL,
-    issued_at DATE NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
     loan_type_id INT,
     FOREIGN KEY (user_id) REFERENCES user(user_id),
     FOREIGN KEY (loan_type_id) REFERENCES loan_type(loan_type_id)
@@ -92,6 +88,10 @@ CREATE TABLE loan_payment (
     FOREIGN KEY (payment_type_id) REFERENCES loan_payment_type(loan_payment_type_id)
 );
 
+CREATE TABLE product (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL
+);
 
 CREATE TABLE funds (
     fund_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -123,6 +123,24 @@ CREATE TABLE contribution_payment (
     FOREIGN KEY (user_id) REFERENCES user(user_id),
     FOREIGN KEY (contribution_id) REFERENCES contribution(contribution_id)
 );
+
+CREATE TABLE supply (
+    supply_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    supply_amount DECIMAL(10, 2) NOT NULL,
+    supply_balance DECIMAL(10, 2) NOT NULL,
+    supply_date DATE NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user(user_id)
+);
+
+CREATE TABLE supply_payment (
+    supply_payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    supply_id INT NOT NULL,
+    payment_date DATE NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (supply_id) REFERENCES supply(supply_id)
+);
+
 
 
 INSERT INTO `role` (role_name) VALUES

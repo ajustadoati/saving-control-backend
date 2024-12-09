@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -34,7 +33,7 @@ public class PaymentController {
   public ResponseEntity<String> registrarPago(@RequestBody PaymentFileRequest paymentFileRequest) {
     try {
       // Llama al servicio para agregar el registro al Excel
-      fileService.registrarPago(
+      fileService.registrarPagoAhorro(
         paymentFileRequest.getNombre(),
         paymentFileRequest.getTipoPago(),
         paymentFileRequest.getMonto(),

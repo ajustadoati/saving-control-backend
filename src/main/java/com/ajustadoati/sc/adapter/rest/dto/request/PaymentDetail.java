@@ -1,5 +1,6 @@
 package com.ajustadoati.sc.adapter.rest.dto.request;
 
+import com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum;
 import lombok.Data;
 
 import java.math.BigDecimal;

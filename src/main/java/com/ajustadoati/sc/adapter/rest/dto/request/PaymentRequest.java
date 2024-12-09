@@ -8,7 +8,7 @@ import java.util.List;
 @Data
 public class PaymentRequest {
 
-    private Integer userId; // User making the payment
+    private Integer userId;
     private List<PaymentDetail> payments;
     private LocalDate date;
 
