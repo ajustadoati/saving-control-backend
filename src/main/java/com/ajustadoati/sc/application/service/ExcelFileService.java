@@ -64,4 +64,12 @@ public class ExcelFileService {
     }
   }
 
+  public String filePath(){
+    var file = new File(fileProperties.getDir(), FILE_NAME);
+    if (!file.exists()) {
+      throw new IllegalArgumentException("File not found or it was downloaded previously");
+    }
+    return file.getAbsolutePath();
+  }
+
 }
