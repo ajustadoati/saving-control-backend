@@ -22,7 +22,7 @@ jwt:
 
 file:
   #dir: /Users/rojasric/projects/files
-  dir: /home/ajustado/caja-ahorro/files
+  dir: /Users/ajustado/caja-ahorro/files
 
 logging:
   level:

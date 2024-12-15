@@ -60,7 +60,7 @@ public class PaymentService {
 
     for (PaymentDetail paymentDetail : request.getPayments()) {
       var status = new PaymentResponse.PaymentStatus();
-      status.setPaymentType(PaymentTypeEnum.fromDescription(paymentDetail.getPaymentType()));
+      status.setPaymentType(paymentDetail.getPaymentType());
       status.setReferenceId(paymentDetail.getReferenceId());
       status.setAmount(paymentDetail.getAmount());
 
@@ -69,7 +69,7 @@ public class PaymentService {
           case ADMINISTRATIVE, SHARED_CONTRIBUTION:
             contributionPaymentRequests.add(
               getContributionPaymentRequest(user.getUserId(), paymentDetail, request.getDate()));
-            if (PaymentTypeEnum.fromDescription(paymentDetail.getPaymentType())
+            if (paymentDetail.getPaymentType()
               .equals(ADMINISTRATIVE)) {
               pagos.add(
                 Pago.builder().tipoPago(TipoPagoEnum.ADMINISTRATIVO)
