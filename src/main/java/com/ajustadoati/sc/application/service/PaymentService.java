@@ -2,6 +2,10 @@ package com.ajustadoati.sc.application.service;
 
 
 import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.ADMINISTRATIVE;
+import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.CHILDRENS_SAVING;
+import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.PARTNER_SAVING;
+import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.SAVING;
+import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.SHARED_CONTRIBUTION;
 
 import com.ajustadoati.sc.adapter.rest.dto.request.ContributionPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentDetail;
@@ -61,7 +65,7 @@ public class PaymentService {
       status.setAmount(paymentDetail.getAmount());
 
       try {
-        switch (PaymentTypeEnum.fromDescription(paymentDetail.getPaymentType())) {
+        switch (paymentDetail.getPaymentType()) {
           case ADMINISTRATIVE, SHARED_CONTRIBUTION:
             contributionPaymentRequests.add(
               getContributionPaymentRequest(user.getUserId(), paymentDetail, request.getDate()));
