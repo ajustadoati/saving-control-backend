@@ -22,6 +22,7 @@ import com.ajustadoati.sc.application.service.dto.enums.TipoPagoEnum;
 import com.ajustadoati.sc.application.service.file.FileService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentService {
 
 
@@ -113,6 +115,11 @@ public class PaymentService {
             processLoanRepayment(user.getUserId(), paymentDetail, request.getDate());
             break;
 
+          case OTHER_PAYMENTS:
+
+            processLoanRepayment(user.getUserId(), paymentDetail, request.getDate());
+            break;
+
           default:
             throw new IllegalArgumentException("Invalid payment type");
         }
@@ -157,6 +164,10 @@ public class PaymentService {
   }
 
   private void processSuppliesPayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
+  }
+
+  private void processOthersPayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
+    log.info("Not Payment type for processing {}", paymentDetail.getPaymentType());
   }
 
   private ContributionPaymentRequest getContributionPaymentRequest(Integer userId,
