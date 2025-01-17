@@ -96,6 +96,10 @@ public class PaymentService {
             break;
 
           case SUPPLIES:
+            pagoDtos.add(
+              PagoDto.builder().tipoPago(TipoPagoEnum.SUMINISTROS)
+                .monto(paymentDetail.getAmount().doubleValue())
+                .fecha(request.getDate().toString()).cedula(user.getNumberId()).build());
             processSuppliesPayment(user.getUserId(), paymentDetail, request.getDate());
             break;
 
