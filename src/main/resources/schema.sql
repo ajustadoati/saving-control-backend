@@ -141,6 +141,14 @@ CREATE TABLE supply_payment (
     FOREIGN KEY (supply_id) REFERENCES supply(supply_id)
 );
 
+CREATE TABLE pago (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fecha DATE NOT NULL,
+    cedula VARCHAR(20) NOT NULL,
+    tipo_pago VARCHAR(50) NOT NULL,
+    monto DECIMAL(10, 2) NOT NULL
+);
+
 
 
 INSERT INTO `role` (role_name) VALUES

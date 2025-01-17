@@ -9,7 +9,8 @@ public enum TipoPagoEnum {
   PRESTAMO_EXTERNO("PRESTAMOS2", "PRESTAMO2"),
   ADMINISTRATIVO("ADMINISTRATIVO", "ADMINISTRATIVO"),
   ABONO_CAPITAL("Abono capital", "PRESTAMOS"),
-  ABONO_INTERES("Abono intereses", "PRESTAMOS");
+  ABONO_INTERES("Abono intereses", "PRESTAMOS"),
+  OTROS("Otros", "OTROS");
 
   private final String description;
   private final String category;

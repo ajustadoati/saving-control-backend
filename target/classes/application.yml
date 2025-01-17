@@ -21,8 +21,8 @@ jwt:
   secretKey: vj7/hMQe+EryZ/3V4O8MjT6Vib1FEivj1xwxIZTam4M=
 
 file:
-  dir: /Users/rojasric/projects/files
-  #dir: /Users/ajustado/caja-ahorro/files
+  #dir: /Users/rojasric/projects/files
+  dir: /Users/ajustado/caja-ahorro/files
 
 logging:
   level:

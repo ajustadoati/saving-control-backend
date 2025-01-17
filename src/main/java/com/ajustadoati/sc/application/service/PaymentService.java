@@ -2,22 +2,20 @@ package com.ajustadoati.sc.application.service;
 
 
 import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.ADMINISTRATIVE;
-import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.CHILDRENS_SAVING;
-import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.PARTNER_SAVING;
-import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.SAVING;
-import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.SHARED_CONTRIBUTION;
 
 import com.ajustadoati.sc.adapter.rest.dto.request.ContributionPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentDetail;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.SavingRequest;
-import com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum;
+import com.ajustadoati.sc.adapter.rest.dto.response.DailyResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse.PaymentStatus;
 import com.ajustadoati.sc.adapter.rest.repository.ContributionTypeRepository;
+import com.ajustadoati.sc.adapter.rest.repository.PagoRepository;
 import com.ajustadoati.sc.adapter.rest.repository.SavingRepository;
 import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
-import com.ajustadoati.sc.application.service.dto.Pago;
+import com.ajustadoati.sc.application.mapper.PagoMapper;
+import com.ajustadoati.sc.application.service.dto.PagoDto;
 import com.ajustadoati.sc.application.service.dto.enums.TipoPagoEnum;
 import com.ajustadoati.sc.application.service.file.FileService;
 import jakarta.transaction.Transactional;
@@ -25,14 +23,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,7 +43,10 @@ public class PaymentService {
   private final UserRepository userRepository;
   private final SavingService savingService;
   private final ContributionPaymentService contributionPaymentService;
+  private final PagoMapper pagoMapper;
   private final FileService fileService;
+  private final PagoRepository pagoRepository;
+  private final Map<String, List<PagoDto>> pagosMap = new HashMap<>();
 
   @Transactional
   public PaymentResponse processPayments(PaymentRequest request) {
@@ -58,7 +59,7 @@ public class PaymentService {
     List<SavingRequest> savingRequests = new ArrayList<>();
     List<ContributionPaymentRequest> contributionPaymentRequests = new ArrayList<>();
 
-    List<Pago> pagos = new ArrayList<>();
+    List<PagoDto> pagoDtos = new ArrayList<>();
 
     for (PaymentDetail paymentDetail : request.getPayments()) {
       var status = new PaymentResponse.PaymentStatus();
@@ -73,13 +74,13 @@ public class PaymentService {
               getContributionPaymentRequest(user.getUserId(), paymentDetail, request.getDate()));
             if (paymentDetail.getPaymentType()
               .equals(ADMINISTRATIVE)) {
-              pagos.add(
-                Pago.builder().tipoPago(TipoPagoEnum.ADMINISTRATIVO)
+              pagoDtos.add(
+                PagoDto.builder().tipoPago(TipoPagoEnum.ADMINISTRATIVO)
                   .monto(paymentDetail.getAmount().doubleValue())
                   .fecha(request.getDate().toString()).cedula(user.getNumberId()).build());
             } else {
-              pagos.add(
-                Pago.builder().tipoPago(TipoPagoEnum.COMPARTIR)
+              pagoDtos.add(
+                PagoDto.builder().tipoPago(TipoPagoEnum.COMPARTIR)
                   .monto(paymentDetail.getAmount().doubleValue())
                   .fecha(request.getDate().toString()).cedula(user.getNumberId()).build());
             }
@@ -88,8 +89,8 @@ public class PaymentService {
           case SAVING, PARTNER_SAVING, CHILDRENS_SAVING:
             savingRequests.add(
               getSavingRequest(user.getUserId(), paymentDetail, request.getDate()));
-            pagos.add(
-              Pago.builder().tipoPago(TipoPagoEnum.AHORRO)
+            pagoDtos.add(
+              PagoDto.builder().tipoPago(TipoPagoEnum.AHORRO)
                 .monto(paymentDetail.getAmount().doubleValue())
                 .fecha(request.getDate().toString()).cedula(user.getNumberId()).build());
 
@@ -100,23 +101,26 @@ public class PaymentService {
             break;
 
           case LOAN_INTEREST_PAYMENT:
-            pagos.add(
-              Pago.builder().tipoPago(TipoPagoEnum.ABONO_INTERES)
+            pagoDtos.add(
+              PagoDto.builder().tipoPago(TipoPagoEnum.ABONO_INTERES)
                 .monto(paymentDetail.getAmount().doubleValue())
                 .fecha(request.getDate().toString()).cedula(user.getNumberId()).build());
             processLoanInterestPayment(user.getUserId(), paymentDetail, request.getDate());
             break;
 
           case LOAN_PAYMENT:
-            pagos.add(
-              Pago.builder().tipoPago(TipoPagoEnum.ABONO_CAPITAL)
+            pagoDtos.add(
+              PagoDto.builder().tipoPago(TipoPagoEnum.ABONO_CAPITAL)
                 .monto(paymentDetail.getAmount().doubleValue())
                 .fecha(request.getDate().toString()).cedula(user.getNumberId()).build());
             processLoanRepayment(user.getUserId(), paymentDetail, request.getDate());
             break;
 
           case OTHER_PAYMENTS:
-
+            pagoDtos.add(
+              PagoDto.builder().tipoPago(TipoPagoEnum.OTROS)
+                .monto(paymentDetail.getAmount().doubleValue())
+                .fecha(request.getDate().toString()).cedula(user.getNumberId()).build());
             processLoanRepayment(user.getUserId(), paymentDetail, request.getDate());
             break;
 
@@ -141,12 +145,17 @@ public class PaymentService {
     if (!contributionPaymentRequests.isEmpty()) {
       contributionPaymentService.saveList(contributionPaymentRequests);
     }
+    pagosMap.putIfAbsent(request.getDate().toString(), new ArrayList<>());
+    pagosMap.get(request.getDate().toString()).addAll(pagoDtos);
 
-    try {
+    pagoRepository.saveAll(pagoDtos.stream().map(pagoMapper::toEntity).toList());
+
+    log.info("pagos {}", pagosMap);
+    /*try {
       fileService.registrarMultiplesPagos(pagos, user);
     } catch (IOException e) {
       throw new RuntimeException(e);
-    }
+    }*/
 
     PaymentResponse response = new PaymentResponse();
     response.setUserId(user.getUserId());
@@ -154,6 +163,34 @@ public class PaymentService {
     response.setPaymentStatuses(paymentStatuses);
 
     return response;
+  }
+
+  public DailyResponse generateDailyReport(LocalDate fecha) {
+    //List<PagoDto> pagosDelDia = pagosMap.getOrDefault(fecha, new ArrayList<>());
+    var pagosDelDia = pagoRepository.findByFecha(fecha).stream().map(pagoMapper::toDto).toList();
+
+    if (pagosDelDia.isEmpty()) {
+      return new DailyResponse(fecha, null, null, 0.0,
+        "No se registraron pagos en la fecha: " + fecha);
+    }
+
+    // Agrupar pagos por cédula y luego por tipo de pago
+    Map<String, Map<TipoPagoEnum, Double>> pagosAgrupados = pagosDelDia.stream()
+      .collect(Collectors.groupingBy(PagoDto::getCedula,
+        Collectors.groupingBy(PagoDto::getTipoPago,
+          Collectors.summingDouble(PagoDto::getMonto))));
+
+    // Calcular el total por tipo de pago
+    Map<TipoPagoEnum, Double> totalPorTipoPago = pagosDelDia.stream()
+      .collect(Collectors.groupingBy(PagoDto::getTipoPago,
+        Collectors.summingDouble(PagoDto::getMonto)));
+
+    // Calcular el monto total
+    Double montoTotal = pagosDelDia.stream()
+      .mapToDouble(PagoDto::getMonto)
+      .sum();
+
+    return new DailyResponse(fecha, pagosAgrupados, totalPorTipoPago, montoTotal, null);
   }
 
   private void processLoanRepayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {

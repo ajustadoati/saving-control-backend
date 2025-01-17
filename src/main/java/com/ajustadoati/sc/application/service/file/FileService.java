@@ -2,7 +2,7 @@ package com.ajustadoati.sc.application.service.file;
 
 import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
 import com.ajustadoati.sc.application.service.ExcelFileService;
-import com.ajustadoati.sc.application.service.dto.Pago;
+import com.ajustadoati.sc.application.service.dto.PagoDto;
 import com.ajustadoati.sc.domain.User;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -19,14 +19,11 @@ import org.springframework.stereotype.Service;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.text.NumberFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 @Service
 @Slf4j
@@ -49,40 +46,40 @@ public class FileService {
   }
 
   @Transactional
-  public void registrarMultiplesPagos(List<Pago> pagos, User user) throws IOException {
+  public void registrarMultiplesPagos(List<PagoDto> pagoDtos, User user) throws IOException {
 
     try (FileInputStream fis = new FileInputStream(excelFileService.filePath());
       Workbook workbook = WorkbookFactory.create(fis)) {
 
-      for (Pago pago : pagos) {
+      for (PagoDto pagoDto : pagoDtos) {
         try {
-          var sheetName = pago.getTipoPago().getCategory();
+          var sheetName = pagoDto.getTipoPago().getCategory();
           // Obtener la hoja correspondiente al tipo de pago
           Sheet sheet = workbook.getSheet(sheetName);
           if (sheet == null) {
             throw new IllegalArgumentException(
-              "Hoja no encontrada para tipo de pago: " + pago.getTipoPago());
+              "Hoja no encontrada para tipo de pago: " + pagoDto.getTipoPago());
           }
 
-          pago.setFecha(cambiarFormatoFecha(pago.getFecha()));
+          pagoDto.setFecha(cambiarFormatoFecha(pagoDto.getFecha()));
 
           // Manejar el pago según el tipo utilizando switch-case
-          switch (pago.getTipoPago().getCategory()) {
+          switch (pagoDto.getTipoPago().getCategory()) {
             case "AHORRO":
               /*long number = Long.parseLong(pago.getCedula());
               NumberFormat numberFormat = NumberFormat.getInstance(Locale.of("es", "CO"));
               pago.setCedula(numberFormat.format(number));*/
-              procesarPagoAhorro(sheet, pago);
+              procesarPagoAhorro(sheet, pagoDto);
               break;
             case "COMPARTIR", "ADMINISTRATIVO":
-              procesarPagoCompartirOAdministrativo(sheet, pago, user);
+              procesarPagoCompartirOAdministrativo(sheet, pagoDto, user);
               break;
             case "PRESTAMOS":
-              procesarPagoPrestamo(sheet, pago, user);
+              procesarPagoPrestamo(sheet, pagoDto, user);
               break;
 
             default:
-              throw new IllegalArgumentException("Tipo de pago no válido: " + pago.getTipoPago());
+              throw new IllegalArgumentException("Tipo de pago no válido: " + pagoDto.getTipoPago());
           }
         } catch (Exception e) {
           log.error("Error al procesar el pago para {}: {}", user.getFirstName() ,
@@ -99,8 +96,8 @@ public class FileService {
   }
 
 
-  private void procesarPagoAhorro(Sheet sheet, Pago pago) {
-    log.info("procesando pago ahorro {}", pago);
+  private void procesarPagoAhorro(Sheet sheet, PagoDto pagoDto) {
+    log.info("procesando pago ahorro {}", pagoDto);
     for (Row row : sheet) {
       if (row.getRowNum() < 3) {
         continue;
@@ -111,27 +108,27 @@ public class FileService {
         ? cedulaCell.getStringCellValue()
         : String.valueOf((long) cedulaCell.getNumericCellValue());
 
-      if (cedulaValue.contains(pago.getCedula())) {
-        log.info("Registro encontrado para cédula {}", pago.getCedula());
+      if (cedulaValue.contains(pagoDto.getCedula())) {
+        log.info("Registro encontrado para cédula {}", pagoDto.getCedula());
         Row headerRow = sheet.getRow(3);
         for (Cell cell : headerRow) {
-          if (esFechaIgual(cell, pago.getFecha())) {
+          if (esFechaIgual(cell, pagoDto.getFecha())) {
             Cell pagoCell = row.getCell(cell.getColumnIndex(),
               Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-            pagoCell.setCellValue(pago.getMonto());
+            pagoCell.setCellValue(pagoDto.getMonto());
             Cell totalCell = row.getCell(20, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-            totalCell.setCellValue(totalCell.getNumericCellValue() + pago.getMonto());
+            totalCell.setCellValue(totalCell.getNumericCellValue() + pagoDto.getMonto());
             log.info("Pago procesado satisfactoriamente");
             return;
           }
         }
       }
     }
-    throw new IllegalArgumentException("Cédula no encontrada: " + pago.getCedula());
+    throw new IllegalArgumentException("Cédula no encontrada: " + pagoDto.getCedula());
   }
 
-  private void procesarPagoCompartirOAdministrativo(Sheet sheet, Pago pago, User user) {
-    log.info("procesando pago compartir o administrativo {}", pago);
+  private void procesarPagoCompartirOAdministrativo(Sheet sheet, PagoDto pagoDto, User user) {
+    log.info("procesando pago compartir o administrativo {}", pagoDto);
     for (Row row : sheet) {
       if (row.getRowNum() < 2) {
         continue;
@@ -144,21 +141,21 @@ public class FileService {
           user.getFirstName() + " " + user.getLastName());
         Row headerRow = sheet.getRow(2);
         for (Cell cell : headerRow) {
-          if (esFechaIgual(cell, pago.getFecha())) {
+          if (esFechaIgual(cell, pagoDto.getFecha())) {
             Cell pagoCell = row.getCell(cell.getColumnIndex(),
               Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-            pagoCell.setCellValue(pago.getMonto());
-            log.info("Pago procesado: {}", pago.getTipoPago().getDescription());
+            pagoCell.setCellValue(pagoDto.getMonto());
+            log.info("Pago procesado: {}", pagoDto.getTipoPago().getDescription());
             return;
           }
         }
       }
     }
-    throw new IllegalArgumentException("Nombre no encontrado: " + pago.getCedula());
+    throw new IllegalArgumentException("Nombre no encontrado: " + pagoDto.getCedula());
   }
 
-  private void procesarPagoPrestamo(Sheet sheet, Pago pago, User user) {
-    log.info("Procesando pago préstamo {}", pago);
+  private void procesarPagoPrestamo(Sheet sheet, PagoDto pagoDto, User user) {
+    log.info("Procesando pago préstamo {}", pagoDto);
 
     int fechaFilaIndex = -1;
 
@@ -169,7 +166,7 @@ public class FileService {
       for (Cell cell : row) {
         if (cell != null && cell.getCellType() == CellType.STRING &&
           cell.getStringCellValue().contains("RELACION DE PRESTAMOS") &&
-          cell.getStringCellValue().contains(pago.getFecha())) {
+          cell.getStringCellValue().contains(pagoDto.getFecha())) {
 
           fechaFilaIndex = row.getRowNum();
           break;
@@ -179,10 +176,10 @@ public class FileService {
     }
 
     if (fechaFilaIndex == -1) {
-      throw new IllegalArgumentException("Encabezado con fecha no encontrado: " + pago.getFecha());
+      throw new IllegalArgumentException("Encabezado con fecha no encontrado: " + pagoDto.getFecha());
     }
 
-    log.info("Fila para la fecha '{}' encontrada en el índice {}", pago.getFecha(), fechaFilaIndex);
+    log.info("Fila para la fecha '{}' encontrada en el índice {}", pagoDto.getFecha(), fechaFilaIndex);
 
     // Buscar la fila del usuario
     boolean usuarioEncontrado = false;
@@ -206,8 +203,8 @@ public class FileService {
         log.info("Registro encontrado para el nombre: {} en la fila {}", user.getFirstName() + " " + user.getLastName(), row.getRowNum());
 
         // Determinar columna según tipo de pago
-        int columna = pago.getTipoPago().getDescription().equalsIgnoreCase("abono capital") ? 14 : 12;
-        actualizarCelda(row, columna, pago.getMonto());
+        int columna = pagoDto.getTipoPago().getDescription().equalsIgnoreCase("abono capital") ? 14 : 12;
+        actualizarCelda(row, columna, pagoDto.getMonto());
 
         usuarioEncontrado = true;
         break;
@@ -429,7 +426,7 @@ public class FileService {
     }
   }
 
-  public void registrarPagoPrestamo(Sheet sheet, Pago pago, User user) throws IOException {
+  public void registrarPagoPrestamo(Sheet sheet, PagoDto pagoDto, User user) throws IOException {
 
     try (FileInputStream fis = new FileInputStream(excelFileService.filePath());
       Workbook workbook = WorkbookFactory.create(fis)) {
@@ -448,7 +445,7 @@ public class FileService {
         for (Cell cell : row) {
           if (cell != null && cell.getCellType() == CellType.STRING &&
             cell.getStringCellValue().contains("RELACION DE PRESTAMOS") &&
-            cell.getStringCellValue().contains(pago.getFecha())) {
+            cell.getStringCellValue().contains(pagoDto.getFecha())) {
 
             fechaFilaIndex = row.getRowNum(); // Guardar la fila del encabezado
             fechaColumnaIndex = cell.getColumnIndex(); // Guardar la columna de la fecha
@@ -462,10 +459,10 @@ public class FileService {
       }
 
       if (fechaFilaIndex == -1) {
-        throw new IllegalArgumentException("Encabezado con fecha no encontrado: " + pago.getFecha());
+        throw new IllegalArgumentException("Encabezado con fecha no encontrado: " + pagoDto.getFecha());
       }
 
-      log.info("Fila para la fecha {} encontrada en el índice {}",  pago.getFecha(), fechaFilaIndex);
+      log.info("Fila para la fecha {} encontrada en el índice {}",  pagoDto.getFecha(), fechaFilaIndex);
 
       // Buscar la fila del socio a partir de la fila de la fecha
       for (int i = fechaFilaIndex + 1; i <= sheet.getLastRowNum(); i++) {
@@ -487,18 +484,18 @@ public class FileService {
           log.info("Registro encontrado para el nombre: {}", user.getFirstName() + " "+ user.getLastName());
           registroEncontrado = true;
 
-          if (pago.getTipoPago().getDescription().equalsIgnoreCase("abono capital")) {
+          if (pagoDto.getTipoPago().getDescription().equalsIgnoreCase("abono capital")) {
             // Actualizar "Abono Capital"
             Cell abonoCapitalCell = row.getCell(14, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
             double valorActual = abonoCapitalCell.getNumericCellValue();
-            abonoCapitalCell.setCellValue(valorActual + pago.getMonto());
-          } else if (pago.getTipoPago().getDescription().equalsIgnoreCase("abono intereses")) {
+            abonoCapitalCell.setCellValue(valorActual + pagoDto.getMonto());
+          } else if (pagoDto.getTipoPago().getDescription().equalsIgnoreCase("abono intereses")) {
             // Actualizar "Abono Intereses"
             Cell abonoInteresesCell = row.getCell(12, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
             double valorActual = abonoInteresesCell.getNumericCellValue();
-            abonoInteresesCell.setCellValue(valorActual + pago.getMonto());
+            abonoInteresesCell.setCellValue(valorActual + pagoDto.getMonto());
           } else {
-            throw new IllegalArgumentException("Tipo de pago no válido: {}" + pago);
+            throw new IllegalArgumentException("Tipo de pago no válido: {}" + pagoDto);
           }
 
           break;
@@ -514,7 +511,7 @@ public class FileService {
         workbook.write(fos);
       }
       log.info("Pago registrado en la hoja {} para el nombre {}, tipo de pago: {}", sheet, user.getFirstName(),
-        pago.getTipoPago());
+        pagoDto.getTipoPago());
     }
   }
 
