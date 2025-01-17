@@ -46,7 +46,6 @@ public class PaymentService {
   private final PagoMapper pagoMapper;
   private final FileService fileService;
   private final PagoRepository pagoRepository;
-  private final Map<String, List<PagoDto>> pagosMap = new HashMap<>();
 
   @Transactional
   public PaymentResponse processPayments(PaymentRequest request) {
@@ -145,12 +144,15 @@ public class PaymentService {
     if (!contributionPaymentRequests.isEmpty()) {
       contributionPaymentService.saveList(contributionPaymentRequests);
     }
-    pagosMap.putIfAbsent(request.getDate().toString(), new ArrayList<>());
-    pagosMap.get(request.getDate().toString()).addAll(pagoDtos);
 
-    pagoRepository.saveAll(pagoDtos.stream().map(pagoMapper::toEntity).toList());
+    if (pagoRepository.findByFechaAndCedula(request.getDate(),user.getNumberId()).isEmpty()){
+      pagoRepository.saveAll(pagoDtos.stream().map(pagoMapper::toEntity).toList());
+    } else {
+      throw new IllegalArgumentException("Payments already registered for user");
+    }
 
-    log.info("pagos {}", pagosMap);
+
+    log.info("pagos {}", pagoDtos);
     /*try {
       fileService.registrarMultiplesPagos(pagos, user);
     } catch (IOException e) {

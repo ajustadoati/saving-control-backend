@@ -10,4 +10,6 @@ public interface PagoRepository extends JpaRepository<Pago, Integer> {
 
   List<Pago> findByFecha(LocalDate fecha);
 
+  List<Pago> findByFechaAndCedula(LocalDate fecha, String cedula);
+
 }
