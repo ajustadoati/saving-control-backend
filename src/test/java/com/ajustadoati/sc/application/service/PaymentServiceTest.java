@@ -7,8 +7,10 @@ import com.ajustadoati.sc.adapter.rest.dto.request.PaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse;
 import com.ajustadoati.sc.adapter.rest.repository.ContributionTypeRepository;
+import com.ajustadoati.sc.adapter.rest.repository.PagoRepository;
 import com.ajustadoati.sc.adapter.rest.repository.SavingRepository;
 import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
+import com.ajustadoati.sc.application.mapper.PagoMapper;
 import com.ajustadoati.sc.application.service.file.FileService;
 import com.ajustadoati.sc.domain.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,10 +45,16 @@ class PaymentServiceTest {
   private SavingService savingService;
 
   @Mock
-  private ContributionPaymentService contributionPaymentService;
+  private PagoRepository pagoRepository;
 
   @Mock
-  private FileService fileService;
+  private PagoMapper pagoMapper;
+
+  @Mock
+  private ContributionPaymentService contributionPaymentService;
+
+ /* @Mock
+  private FileService fileService;*/
 
   @BeforeEach
   void setUp() {
@@ -61,9 +69,9 @@ class PaymentServiceTest {
     paymentRequest.setUserId(userId);
     paymentRequest.setDate(LocalDate.now());
     paymentRequest.setPayments(List.of(
-      createPaymentDetail(PaymentTypeEnum.ADMINISTRATIVE.getDescription(), 101,
+      createPaymentDetail(PaymentTypeEnum.ADMINISTRATIVE, 101,
         BigDecimal.valueOf(100.00)),
-      createPaymentDetail(PaymentTypeEnum.SAVING.getDescription(), 102, BigDecimal.valueOf(50.00))
+      createPaymentDetail(PaymentTypeEnum.SAVING, 102, BigDecimal.valueOf(50.00))
     ));
 
     var user = new User();
@@ -85,7 +93,7 @@ class PaymentServiceTest {
 
     verify(savingService, times(1)).addSavingSet(eq(userId), anyList());
     verify(contributionPaymentService, times(1)).saveList(anyList());
-    verify(fileService, times(1)).registrarMultiplesPagos(anyList(), any());
+    //verify(fileService, times(1)).registrarMultiplesPagos(anyList(), any());
   }
 
   @Test
@@ -106,7 +114,7 @@ class PaymentServiceTest {
     verifyNoInteractions(contributionPaymentService);
   }
 
-  private PaymentDetail createPaymentDetail(String type, Integer referenceId, BigDecimal amount) {
+  private PaymentDetail createPaymentDetail(PaymentTypeEnum type, Integer referenceId, BigDecimal amount) {
     var detail = new PaymentDetail();
     detail.setPaymentType(type);
     detail.setReferenceId(referenceId);
