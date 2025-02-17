@@ -3,7 +3,6 @@ package com.ajustadoati.sc.adapter.rest;
 import com.ajustadoati.sc.adapter.rest.dto.response.LoanTypeDto;
 import com.ajustadoati.sc.application.mapper.LoanTypeMapper;
 import com.ajustadoati.sc.application.service.LoanTypeService;
-import com.ajustadoati.sc.domain.Product;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -40,6 +40,7 @@ public class SecurityConfig{
             .requestMatchers("/api/users/**").hasRole("ADMIN")
             .requestMatchers("/api/rasa/**").permitAll()
             .requestMatchers("/api/products/**").hasRole("ADMIN")
+            .requestMatchers("/api/loanTypes/**").hasRole("ADMIN")
             .requestMatchers("/api/file/**").hasRole("ADMIN")
             .requestMatchers("/api/payments/**").permitAll()
             .requestMatchers("/api/contributionTypes/**").hasRole("ADMIN")
