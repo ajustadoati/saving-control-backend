@@ -29,7 +29,6 @@ public class UserSavingsBoxController {
 
   @PostMapping
   public ResponseEntity<UserSavingsBoxDto> createOrUpdateSavingsBox(
-    @PathVariable Integer userId,
     @RequestBody UserSavingsBoxRequest request) {
 
     return new ResponseEntity<>(userSavingsBoxService.save(request), HttpStatus.CREATED);
