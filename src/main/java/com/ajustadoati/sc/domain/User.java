@@ -54,4 +54,15 @@ public class User {
 
   @OneToMany(mappedBy = "user")
   private List<ContributionPayment> contributionPayments;
+
+  @OneToOne(mappedBy = "user")
+  private UserSavingsBox userSavingsBox;
+
+  @OneToOne(mappedBy = "user")
+  private UserAccountSummary userAccountSummary;
+
+  @OneToMany(mappedBy = "user")
+  private List<BalanceHistory> balanceHistories;
+
+
 }

@@ -130,6 +130,7 @@ CREATE TABLE supply (
     supply_amount DECIMAL(10, 2) NOT NULL,
     supply_balance DECIMAL(10, 2) NOT NULL,
     supply_date DATE NOT NULL,
+    supply_name VARCHAR(300),
     FOREIGN KEY (user_id) REFERENCES user(user_id)
 );
 
@@ -149,7 +150,36 @@ CREATE TABLE pago (
     monto DECIMAL(10, 2) NOT NULL
 );
 
+CREATE TABLE user_savings_box (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    box_count INT NOT NULL DEFAULT 0,
+    box_value DECIMAL(10,2) NOT NULL,  -- Ejemplo: 18.00
+    updated_at  DATE NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user(user_id)
+);
 
+CREATE TABLE user_account_summary (
+    summary_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    initial_balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+    current_balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(user_id)
+);
+
+CREATE TABLE balance_history (
+    history_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    transaction_date DATETIME NOT NULL,       -- Fecha y hora en que se realizó la transacción
+    transaction_type VARCHAR(50) NOT NULL,      -- Tipo de transacción (p.ej., "Intereses", "Depósito", "Retiro", etc.)
+    amount DECIMAL(12,2) NOT NULL,              -- Monto de la transacción (positivo para crédito, negativo para débito)
+    previous_balance DECIMAL(12,2) NOT NULL,    -- Saldo antes de la transacción
+    new_balance DECIMAL(12,2) NOT NULL,         -- Saldo después de la transacción
+    description VARCHAR(255),                   -- Descripción o notas adicionales (opcional)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Fecha de creación del registro
+    FOREIGN KEY (user_id) REFERENCES user(user_id)
+);
 
 INSERT INTO `role` (role_name) VALUES
 	 ('ADMIN'),

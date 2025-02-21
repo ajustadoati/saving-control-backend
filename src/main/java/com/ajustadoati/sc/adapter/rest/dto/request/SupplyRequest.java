@@ -8,6 +8,7 @@ import java.time.LocalDate;
 @Data
 public class SupplyRequest {
   private Integer userId;
+  private String supplyName;
   private BigDecimal supplyAmount;
   private LocalDate supplyDate;
 }

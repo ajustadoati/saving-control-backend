@@ -34,5 +34,7 @@ public class Supply {
   @Column(nullable = false)
   private LocalDate supplyDate;
 
+  private String supplyName;
+
 }
 
