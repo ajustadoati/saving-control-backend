@@ -12,6 +12,7 @@ import com.ajustadoati.sc.domain.LoanPayment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -27,7 +28,7 @@ public class LoanService {
   public LoanResponse createLoan(LoanRequest request) {
     var loanType = loanTypeRepository.findById(request.getLoanTypeId())
       .orElseThrow(() -> new IllegalArgumentException("Invalid Loan Type"));
-    var user =  userService.getUserById(request.getUserId());
+    var user = userService.getUserById(request.getUserId());
 
     Loan loan = new Loan();
     loan.setUser(user);
@@ -67,6 +68,11 @@ public class LoanService {
   public List<LoanResponse> getLoansByUser(Integer userId) {
     return loanRepository.findByUser_UserId(userId).stream()
       .map(this::mapToLoanResponse).toList();
+  }
+
+  public List<Loan> getLoanByStartDate(LocalDate startDate) {
+
+    return loanRepository.findByStartDate(startDate);
   }
 
   private LoanResponse mapToLoanResponse(Loan loan) {

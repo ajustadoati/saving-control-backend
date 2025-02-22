@@ -19,6 +19,8 @@ public class DailyResponse {
   private LocalDate fecha;
   private Map<String, Map<TipoPagoEnum, Double>> pagos;
   private Map<TipoPagoEnum, Double> totalPorTipoPago;
+  private Double totalPrestamos;
+  private Double totalPagos;
   private Double montoTotal;
   private String mensaje;
 }

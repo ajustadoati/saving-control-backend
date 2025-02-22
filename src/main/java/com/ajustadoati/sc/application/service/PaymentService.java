@@ -8,6 +8,7 @@ import com.ajustadoati.sc.adapter.rest.dto.request.PaymentDetail;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.SavingRequest;
 import com.ajustadoati.sc.adapter.rest.dto.response.DailyResponse;
+import com.ajustadoati.sc.adapter.rest.dto.response.LoanResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse.PaymentStatus;
 import com.ajustadoati.sc.adapter.rest.repository.ContributionTypeRepository;
@@ -18,6 +19,7 @@ import com.ajustadoati.sc.application.mapper.PagoMapper;
 import com.ajustadoati.sc.application.service.dto.PagoDto;
 import com.ajustadoati.sc.application.service.dto.enums.TipoPagoEnum;
 import com.ajustadoati.sc.application.service.file.FileService;
+import com.ajustadoati.sc.domain.Loan;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,8 +46,8 @@ public class PaymentService {
   private final SavingService savingService;
   private final ContributionPaymentService contributionPaymentService;
   private final PagoMapper pagoMapper;
-  private final FileService fileService;
   private final PagoRepository pagoRepository;
+  private final LoanService loanService;
 
   @Transactional
   public PaymentResponse processPayments(PaymentRequest request) {
@@ -149,12 +151,11 @@ public class PaymentService {
       contributionPaymentService.saveList(contributionPaymentRequests);
     }
 
-    if (pagoRepository.findByFechaAndCedula(request.getDate(),user.getNumberId()).isEmpty()){
+    if (pagoRepository.findByFechaAndCedula(request.getDate(), user.getNumberId()).isEmpty()) {
       pagoRepository.saveAll(pagoDtos.stream().map(pagoMapper::toEntity).toList());
     } else {
       throw new IllegalArgumentException("Payments already registered for user");
     }
-
 
     log.info("pagos {}", pagoDtos);
     /*try {
@@ -172,11 +173,23 @@ public class PaymentService {
   }
 
   public DailyResponse generateDailyReport(LocalDate fecha) {
-    //List<PagoDto> pagosDelDia = pagosMap.getOrDefault(fecha, new ArrayList<>());
-    var pagosDelDia = pagoRepository.findByFecha(fecha).stream().map(pagoMapper::toDto).toList();
 
+    var pagosDelDia = pagoRepository.findByFecha(fecha).stream().map(pagoMapper::toDto).toList();
+    var loansByUser = loanService.getLoanByStartDate(fecha)
+      .stream()
+      .collect(Collectors.groupingBy(
+        loan -> loan.getUser().getNumberId(),  // Obtener la cédula del usuario
+        Collectors.mapping(
+          Loan::getLoanAmount,
+          Collectors.reducing(BigDecimal.ZERO, BigDecimal::add)
+        )
+      ));
+
+    var totalLoans = loansByUser.values().stream()
+      .reduce(BigDecimal.ZERO, BigDecimal::add)
+      .doubleValue();
     if (pagosDelDia.isEmpty()) {
-      return new DailyResponse(fecha, null, null, 0.0,
+      return new DailyResponse(fecha, null, null, 0.0, 0.0, 0.0,
         "No se registraron pagos en la fecha: " + fecha);
     }
 
@@ -186,17 +199,23 @@ public class PaymentService {
         Collectors.groupingBy(PagoDto::getTipoPago,
           Collectors.summingDouble(PagoDto::getMonto))));
 
+    loansByUser.forEach((cedula, loanAmount) ->
+      pagosAgrupados.computeIfAbsent(cedula, k -> new HashMap<>())
+        .put(TipoPagoEnum.PRESTAMOS, loanAmount.doubleValue()));
+
     // Calcular el total por tipo de pago
     Map<TipoPagoEnum, Double> totalPorTipoPago = pagosDelDia.stream()
       .collect(Collectors.groupingBy(PagoDto::getTipoPago,
         Collectors.summingDouble(PagoDto::getMonto)));
 
-    // Calcular el monto total
-    Double montoTotal = pagosDelDia.stream()
+    Double montoTotalPagos = pagosDelDia.stream()
       .mapToDouble(PagoDto::getMonto)
       .sum();
+    // Calcular el monto total
+    Double montoTotal = montoTotalPagos - totalLoans;
 
-    return new DailyResponse(fecha, pagosAgrupados, totalPorTipoPago, montoTotal, null);
+    return new DailyResponse(fecha, pagosAgrupados, totalPorTipoPago, totalLoans, montoTotalPagos,
+      montoTotal, null);
   }
 
   private void processLoanRepayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
