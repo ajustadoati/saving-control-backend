@@ -62,6 +62,7 @@ public class SupplyService {
     SupplyResponse response = new SupplyResponse();
     response.setSupplyId(supply.getSupplyId());
     response.setSupplyAmount(supply.getSupplyAmount());
+    response.setSupplyName(supply.getSupplyName());
     response.setSupplyBalance(supply.getSupplyBalance());
     response.setSupplyDate(supply.getSupplyDate());
     return response;
