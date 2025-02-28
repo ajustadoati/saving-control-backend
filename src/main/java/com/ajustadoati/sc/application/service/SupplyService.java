@@ -27,6 +27,7 @@ public class SupplyService {
     supply.setUser(user);
     supply.setSupplyAmount(request.getSupplyAmount());
     supply.setSupplyBalance(request.getSupplyAmount());
+    supply.setSupplyName(request.getSupplyName());
     supply.setSupplyDate(request.getSupplyDate());
 
     supply = supplyRepository.save(supply);
