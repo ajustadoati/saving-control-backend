@@ -3,7 +3,9 @@ package com.ajustadoati.sc.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "funds")
@@ -19,12 +21,22 @@ public class Funds {
   private Integer fundId;
 
   @Column(name = "initial_capital", nullable = false, precision = 12)
-  private Double initialCapital;
+  private BigDecimal initialCapital;
 
   @Column(name = "current_balance", nullable = false, precision = 12)
-  private Double currentBalance;
+  private BigDecimal currentBalance;
 
   @Column(name = "last_updated", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-  private Timestamp lastUpdated;
+  private LocalDate lastUpdated;
+
+  @Override
+  public String toString() {
+    return "Funds{" +
+      "fundId=" + fundId +
+      ", initialCapital=" + initialCapital +
+      ", currentBalance=" + currentBalance +
+      ", lastUpdated=" + lastUpdated +
+      '}';
+  }
 }
 

@@ -7,6 +7,7 @@ import com.ajustadoati.sc.adapter.rest.repository.LoanPaymentRepository;
 import com.ajustadoati.sc.adapter.rest.repository.LoanPaymentTypeRepository;
 import com.ajustadoati.sc.adapter.rest.repository.LoanRepository;
 import com.ajustadoati.sc.adapter.rest.repository.LoanTypeRepository;
+import com.ajustadoati.sc.application.service.enums.FundsType;
 import com.ajustadoati.sc.domain.Loan;
 import com.ajustadoati.sc.domain.LoanPayment;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class LoanService {
   private final LoanTypeRepository loanTypeRepository;
   private final LoanPaymentTypeRepository loanPaymentTypeRepository;
   private final UserService userService;
+  private final FundsService fundsService;
 
   public LoanResponse createLoan(LoanRequest request) {
     var loanType = loanTypeRepository.findById(request.getLoanTypeId())
@@ -40,6 +42,7 @@ public class LoanService {
     loan.setLoanType(loanType);
 
     loan = loanRepository.save(loan);
+    fundsService.saveFunds(request.getLoanAmount(), FundsType.SUBTRACT);
 
     return mapToLoanResponse(loan);
   }

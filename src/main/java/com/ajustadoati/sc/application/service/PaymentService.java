@@ -18,6 +18,7 @@ import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
 import com.ajustadoati.sc.application.mapper.PagoMapper;
 import com.ajustadoati.sc.application.service.dto.PagoDto;
 import com.ajustadoati.sc.application.service.dto.enums.TipoPagoEnum;
+import com.ajustadoati.sc.application.service.enums.FundsType;
 import com.ajustadoati.sc.application.service.file.FileService;
 import com.ajustadoati.sc.domain.Loan;
 import jakarta.transaction.Transactional;
@@ -48,6 +49,7 @@ public class PaymentService {
   private final PagoMapper pagoMapper;
   private final PagoRepository pagoRepository;
   private final LoanService loanService;
+  private final FundsService fundsService;
 
   @Transactional
   public PaymentResponse processPayments(PaymentRequest request) {
@@ -153,16 +155,17 @@ public class PaymentService {
 
     if (pagoRepository.findByFechaAndCedula(request.getDate(), user.getNumberId()).isEmpty()) {
       pagoRepository.saveAll(pagoDtos.stream().map(pagoMapper::toEntity).toList());
+      pagoDtos.stream().filter(pagoDto -> pagoDto.getTipoPago().equals(TipoPagoEnum.AHORRO)
+          || pagoDto.getTipoPago().equals(TipoPagoEnum.ABONO_CAPITAL) || pagoDto.getTipoPago()
+          .equals(TipoPagoEnum.ABONO_INTERES))
+        .forEach(pagoDto ->
+          fundsService.saveFunds(BigDecimal.valueOf(pagoDto.getMonto()), FundsType.ADD)
+        );
     } else {
       throw new IllegalArgumentException("Payments already registered for user");
     }
 
     log.info("pagos {}", pagoDtos);
-    /*try {
-      fileService.registrarMultiplesPagos(pagos, user);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }*/
 
     PaymentResponse response = new PaymentResponse();
     response.setUserId(user.getUserId());

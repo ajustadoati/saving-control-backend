@@ -39,24 +39,4 @@ public class PaymentController {
     return ResponseEntity.ok(paymentService.generateDailyReport(date));
   }
 
-  @PostMapping("/to-file")
-  public ResponseEntity<String> registrarPago(@RequestBody PaymentFileRequest paymentFileRequest) {
-    try {
-      // Llama al servicio para agregar el registro al Excel
-      fileService.registrarPagoAhorro(
-        paymentFileRequest.getNombre(),
-        paymentFileRequest.getTipoPago(),
-        paymentFileRequest.getMonto(),
-        paymentFileRequest.getFecha()
-      );
-
-      return ResponseEntity.ok("Pago registrado con éxito en la hoja: " + paymentFileRequest.getTipoPago());
-
-    } catch (IOException e) {
-      e.printStackTrace();
-      return ResponseEntity.status(500).body("Error al procesar el archivo Excel.");
-    } catch (IllegalArgumentException e) {
-      return ResponseEntity.badRequest().body(e.getMessage());
-    }
-  }
 }
