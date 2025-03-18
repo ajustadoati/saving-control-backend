@@ -122,6 +122,13 @@ public class PaymentService {
                 .fecha(request.getDate().toString()).cedula(user.getNumberId()).build());
             processLoanRepayment(user.getUserId(), paymentDetail, request.getDate());
             break;
+          case WHEELS:
+            pagoDtos.add(
+              PagoDto.builder().tipoPago(TipoPagoEnum.CAUCHOS)
+                .monto(paymentDetail.getAmount().doubleValue())
+                .fecha(request.getDate().toString()).cedula(user.getNumberId()).build());
+            processLoanRepayment(user.getUserId(), paymentDetail, request.getDate());
+            break;
 
           case OTHER_PAYMENTS:
             pagoDtos.add(

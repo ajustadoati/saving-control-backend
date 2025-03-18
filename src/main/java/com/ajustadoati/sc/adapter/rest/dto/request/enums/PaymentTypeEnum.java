@@ -9,7 +9,8 @@ public enum PaymentTypeEnum {
   SUPPLIES("Suministros"),
   LOAN_INTEREST_PAYMENT("Interés de préstamo"),
   LOAN_PAYMENT("Abono a préstamo"),
-  OTHER_PAYMENTS("Otros");
+  OTHER_PAYMENTS("Otros"),
+  WHEELS("Cauchos"),;
 
   private final String description;
 
