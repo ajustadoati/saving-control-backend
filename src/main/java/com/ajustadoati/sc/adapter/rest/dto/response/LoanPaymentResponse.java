@@ -9,6 +9,7 @@ import java.time.LocalDate;
 public class LoanPaymentResponse {
 
   private Integer paymentId;
+  private Integer loanId;
   private LocalDate paymentDate;
   private String paymentTypeName;
   private BigDecimal amount;

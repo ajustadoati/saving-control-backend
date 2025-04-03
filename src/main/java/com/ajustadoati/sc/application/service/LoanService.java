@@ -2,6 +2,8 @@ package com.ajustadoati.sc.application.service;
 
 import com.ajustadoati.sc.adapter.rest.dto.request.LoanPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.LoanRequest;
+import com.ajustadoati.sc.adapter.rest.dto.response.BalanceHistoryDto;
+import com.ajustadoati.sc.adapter.rest.dto.response.LoanPaymentResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.LoanResponse;
 import com.ajustadoati.sc.adapter.rest.repository.LoanPaymentRepository;
 import com.ajustadoati.sc.adapter.rest.repository.LoanPaymentTypeRepository;
@@ -10,14 +12,18 @@ import com.ajustadoati.sc.adapter.rest.repository.LoanTypeRepository;
 import com.ajustadoati.sc.application.service.enums.FundsType;
 import com.ajustadoati.sc.domain.Loan;
 import com.ajustadoati.sc.domain.LoanPayment;
+import com.ajustadoati.sc.domain.enums.TransactionType;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LoanService {
 
   private final LoanRepository loanRepository;
@@ -26,6 +32,7 @@ public class LoanService {
   private final LoanPaymentTypeRepository loanPaymentTypeRepository;
   private final UserService userService;
   private final FundsService fundsService;
+  private final BalanceHistoryService balanceHistoryService;
 
   public LoanResponse createLoan(LoanRequest request) {
     var loanType = loanTypeRepository.findById(request.getLoanTypeId())
@@ -60,12 +67,27 @@ public class LoanService {
     payment.setPaymentType(paymentType);
     payment.setAmount(request.getAmount());
 
-    if ("Abono".equals(paymentType.getLoanPaymentTypeName())) {
-      loan.setLoanBalance(loan.getLoanBalance().subtract(request.getAmount()));
-    }
+    if (paymentType.getLoanPaymentTypeId() == 1) {
+      var currentBalance = loan.getLoanBalance();
 
+      if (currentBalance.subtract(request.getAmount()).intValue() < 0) {
+        log.info("Balance is less than payment amount, it will be set to 0");
+        request.setAmount(loan.getLoanBalance());
+      }
+      loan.setLoanBalance(loan.getLoanBalance().subtract(request.getAmount()));
+      var history = new BalanceHistoryDto(0, loan.getUser().getUserId(), LocalDate.now(),
+        TransactionType.LOAN_PAYMENT, request.getAmount(), "Loan payment");
+
+      balanceHistoryService.save(history);
+    } else {
+      var history = new BalanceHistoryDto(0, loan.getUser().getUserId(), LocalDate.now(),
+        TransactionType.LOAN_INTEREST_PAYMENT, request.getAmount(), "Loan payment interest");
+
+      balanceHistoryService.save(history);
+    }
     loanPaymentRepository.save(payment);
     loanRepository.save(loan);
+    fundsService.saveFunds(request.getAmount(), FundsType.ADD);
   }
 
   public List<LoanResponse> getLoansByUser(Integer userId) {
@@ -76,6 +98,19 @@ public class LoanService {
   public List<Loan> getLoanByStartDate(LocalDate startDate) {
 
     return loanRepository.findByStartDate(startDate);
+  }
+
+  public List<LoanPaymentResponse> getPaymentsByLoan(Integer loanId) {
+    return loanPaymentRepository.findByLoan_LoanId(loanId).stream()
+      .map(payment -> {
+        LoanPaymentResponse response = new LoanPaymentResponse();
+        response.setPaymentId(payment.getPaymentId());
+        response.setLoanId(payment.getLoan().getLoanId());
+        response.setPaymentDate(payment.getPaymentDate());
+        response.setAmount(payment.getAmount());
+        response.setPaymentTypeName(payment.getPaymentType().getLoanPaymentTypeName());
+        return response;
+      }).toList();
   }
 
   private LoanResponse mapToLoanResponse(Loan loan) {

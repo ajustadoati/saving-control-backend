@@ -4,8 +4,12 @@ import com.ajustadoati.sc.adapter.rest.dto.request.SavingRequest;
 import com.ajustadoati.sc.adapter.rest.dto.response.SavingsResumeDto;
 import com.ajustadoati.sc.adapter.rest.repository.SavingRepository;
 import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
+import com.ajustadoati.sc.application.service.enums.FundsType;
+import com.ajustadoati.sc.domain.BalanceHistory;
 import com.ajustadoati.sc.domain.Saving;
 import com.ajustadoati.sc.domain.User;
+import com.ajustadoati.sc.domain.enums.TransactionType;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,16 +27,18 @@ import java.util.stream.Collectors;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class SavingService {
 
   private final UserRepository userRepository;
 
   private final SavingRepository savingRepository;
 
-  public SavingService(UserRepository userRepository, SavingRepository savingRepository) {
-    this.userRepository = userRepository;
-    this.savingRepository = savingRepository;
-  }
+  private final BalanceHistoryService balanceHistoryService;
+
+  private final UserAccountSummaryService userAccountSummaryService;
+
+  private final FundsService fundsService;
 
   public Saving addSaving(Integer userId, SavingRequest savingRequest) {
     var user = userRepository
@@ -77,8 +83,19 @@ public class SavingService {
               .build();
         })
         .collect(Collectors.toList());
+    var balanceHistories = savings
+        .stream()
+        .map(this::balanceHistory)
+        .toList();
+    balanceHistoryService.saveList(balanceHistories);
+    var savedSavings = savingRepository.saveAll(savings);
 
-    return savingRepository.saveAll(savings);
+    savedSavings.forEach(saving -> {
+      userAccountSummaryService.updateBalance(saving.getUser().getUserId(), saving.getAmount());
+      fundsService.saveFunds(saving.getAmount(), FundsType.ADD);
+    });
+
+    return savedSavings;
   }
 
   public Page<Saving> getAllByUserId(Integer userId, Pageable pageable) {
@@ -94,6 +111,16 @@ public class SavingService {
         .totalUsers(userRepository.count())
         .total(savingRepository.getTotalAmount())
         .build();
+  }
+
+  public BalanceHistory balanceHistory(Saving saving) {
+    var balanceHistory = new BalanceHistory();
+    balanceHistory.setUser(saving.getUser());
+    balanceHistory.setTransactionType(TransactionType.SAVING);
+    balanceHistory.setAmount(saving.getAmount());
+    balanceHistory.setTransactionDate(saving.getSavingDate());
+    balanceHistory.setDescription("Saving");
+    return balanceHistory;
   }
 
 }

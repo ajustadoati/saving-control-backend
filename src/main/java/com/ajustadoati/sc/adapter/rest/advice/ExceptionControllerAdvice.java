@@ -1,5 +1,9 @@
 package com.ajustadoati.sc.adapter.rest.advice;
 
+import com.ajustadoati.sc.adapter.rest.exception.AssociationAlreadyExistsException;
+import com.ajustadoati.sc.adapter.rest.exception.BalanceAlreadyExistException;
+import com.ajustadoati.sc.adapter.rest.exception.ErrorResponse;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -15,8 +19,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Global Exception Class
@@ -61,7 +63,7 @@ public class ExceptionControllerAdvice {
   }
 
   /**
-   * Handles a case when mass action is not found
+   * Handles a case when entity is not found
    *
    * @param ex      {@link JpaObjectRetrievalFailureException}
    * @param request input request
@@ -92,7 +94,7 @@ public class ExceptionControllerAdvice {
   }
 
   /**
-   * Handles a case when property for sort in pageable request is unknown
+   * Handles a case for associates
    *
    * @param ex      {@link AssociationAlreadyExistsException}
    * @param request input request
@@ -103,6 +105,36 @@ public class ExceptionControllerAdvice {
     HttpServletRequest request) {
 
     return handle(ex, request, HttpStatus.BAD_REQUEST, VALIDATION_REQUEST_FAILED_TITLE,
+      ex.getMessage());
+  }
+
+  /**
+   * Handles a case for balance exist
+   *
+   * @param ex      {@link BalanceAlreadyExistException}
+   * @param request input request
+   * @return {@link HttpEntity} containing standard body in case of errors.
+   */
+  @ExceptionHandler(BalanceAlreadyExistException.class)
+  public HttpEntity<ErrorResponse> handleBalanceAlreadyExistException(BalanceAlreadyExistException ex,
+    HttpServletRequest request) {
+
+    return handle(ex, request, HttpStatus.BAD_REQUEST, VALIDATION_REQUEST_FAILED_TITLE,
+      ex.getMessage());
+  }
+
+  /**
+   * Handles a case for balance exist
+   *
+   * @param ex      {@link BalanceAlreadyExistException}
+   * @param request input request
+   * @return {@link HttpEntity} containing standard body in case of errors.
+   */
+  @ExceptionHandler(EntityNotFoundException.class)
+  public HttpEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex,
+    HttpServletRequest request) {
+
+    return handle(ex, request, HttpStatus.NOT_FOUND, NOT_FOUND_TITLE,
       ex.getMessage());
   }
 

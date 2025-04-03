@@ -2,6 +2,7 @@ package com.ajustadoati.sc.adapter.rest;
 
 import com.ajustadoati.sc.adapter.rest.dto.request.SupplyPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.SupplyRequest;
+import com.ajustadoati.sc.adapter.rest.dto.response.SupplyPaymentResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.SupplyResponse;
 import com.ajustadoati.sc.application.service.SupplyService;
 import lombok.RequiredArgsConstructor;
@@ -36,5 +37,10 @@ public class SupplyController {
   @GetMapping("/user/{userId}")
   public ResponseEntity<List<SupplyResponse>> getSuppliesByUser(@PathVariable Integer userId) {
     return ResponseEntity.ok(supplyService.getSuppliesByUser(userId));
+  }
+
+  @GetMapping("/{supplyId}/payments")
+  public ResponseEntity<List<SupplyPaymentResponse>> getPaymentsBySupply(@PathVariable Integer supplyId) {
+    return ResponseEntity.ok(supplyService.getPaymentsBySupply(supplyId));
   }
 }

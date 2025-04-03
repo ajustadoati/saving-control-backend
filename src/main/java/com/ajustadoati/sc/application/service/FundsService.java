@@ -37,5 +37,9 @@ public class FundsService {
     fundsRepository.saveAndFlush(currentFunds);
   }
 
+  public Funds getFunds(){
+    return fundsRepository.findById(1L).orElseThrow();
+  }
+
 
 }

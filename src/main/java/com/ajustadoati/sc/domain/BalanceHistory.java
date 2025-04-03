@@ -1,8 +1,10 @@
 package com.ajustadoati.sc.domain;
 
+import com.ajustadoati.sc.domain.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -24,23 +26,15 @@ public class BalanceHistory {
   private User user;
 
   @Column(name = "transaction_date", nullable = false)
-  private LocalDateTime transactionDate;
+  private LocalDate transactionDate;
 
   @Column(name = "transaction_type", nullable = false, length = 50)
-  private String transactionType;
+  private TransactionType transactionType;
 
   @Column(name = "amount", nullable = false, precision = 12, scale = 2)
   private BigDecimal amount;
 
-  @Column(name = "previous_balance", nullable = false, precision = 12, scale = 2)
-  private BigDecimal previousBalance;
-
-  @Column(name = "new_balance", nullable = false, precision = 12, scale = 2)
-  private BigDecimal newBalance;
-
   @Column(name = "description", length = 255)
   private String description;
 
-  @Column(name = "created_at", nullable = false)
-  private LocalDateTime createdAt;
 }
