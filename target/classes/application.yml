@@ -1,7 +1,7 @@
 spring:
   datasource:
     url: ${DATASOURCE_URL:jdbc:mysql://ajustadoati.com:3307/calch}
-    username: ${DATASOURCE_USERNAME:ccc}
+    username: ${DATASOURCE_USERNAME:ajustado}
     password: ${DATASOURCE_PASSWORD:xxx.}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hibernate:

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +37,11 @@ public class UserAccountSummaryService {
 
   public UserAccountSummary findByUserId(Integer userId) {
     return repository.findByUser_UserId(userId)
-      .orElseThrow(() -> new EntityNotFoundException("User has not balance"));
+      .orElseThrow(() -> new EntityNotFoundException("User has not balance "+ userId));
+  }
+
+  public List<UserAccountSummary> getAll(){
+      return repository.findAll();
   }
 
   public void updateBalance(Integer userId, BigDecimal amount) {
