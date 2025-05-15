@@ -124,6 +124,15 @@ CREATE TABLE contribution_payment (
     FOREIGN KEY (contribution_id) REFERENCES contribution(contribution_id)
 );
 
+CREATE TABLE other_payment (
+    other_payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    payment_date DATE NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    name VARCHAR(200),
+    FOREIGN KEY (user_id) REFERENCES user(user_id)
+);
+
 CREATE TABLE supply (
     supply_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,

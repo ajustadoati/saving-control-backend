@@ -1,6 +1,7 @@
 package com.ajustadoati.sc.adapter.rest.dto.response;
 
 
+import com.ajustadoati.sc.application.service.dto.DistributionInterestDto;
 import com.ajustadoati.sc.application.service.dto.enums.TipoPagoEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -23,4 +25,5 @@ public class DailyResponse {
   private Double totalPagos;
   private Double montoTotal;
   private String mensaje;
+  private List<DistributionInterestDto> interestReport;
 }

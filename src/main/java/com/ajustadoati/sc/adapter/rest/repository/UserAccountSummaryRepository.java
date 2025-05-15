@@ -6,5 +6,6 @@ import java.util.Optional;
 
 public interface UserAccountSummaryRepository extends JpaRepository<UserAccountSummary, Integer> {
   Optional<UserAccountSummary> findByUser_UserId(Integer userId);
+
 }
 

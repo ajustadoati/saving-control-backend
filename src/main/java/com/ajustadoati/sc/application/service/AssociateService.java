@@ -1,6 +1,6 @@
 package com.ajustadoati.sc.application.service;
 
-import com.ajustadoati.sc.adapter.rest.advice.AssociationAlreadyExistsException;
+import com.ajustadoati.sc.adapter.rest.exception.AssociationAlreadyExistsException;
 import com.ajustadoati.sc.adapter.rest.dto.request.AssociateRequest;
 import com.ajustadoati.sc.adapter.rest.dto.response.AssociateDto;
 import com.ajustadoati.sc.adapter.rest.repository.AssociateRepository;

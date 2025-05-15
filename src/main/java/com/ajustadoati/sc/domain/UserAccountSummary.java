@@ -3,7 +3,7 @@ package com.ajustadoati.sc.domain;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "user_account_summary")
@@ -30,5 +30,5 @@ public class UserAccountSummary {
   private BigDecimal currentBalance;
 
   @Column(name = "last_updated", nullable = false)
-  private LocalDateTime lastUpdated;
+  private LocalDate lastUpdated;
 }

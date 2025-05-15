@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - develop
 
 jobs:
   build-and-deploy:
@@ -62,6 +63,7 @@ jobs:
             docker run -d --name app \
               -p 8083:8080 \
               -e DATASOURCE_USERNAME="${{ secrets.DATASOURCE_USERNAME }}" \
+              -e DATASOURCE_URL="${{ secrets.DATASOURCE_URL }}" \
               -e DATASOURCE_PASSWORD="${{ secrets.DATASOURCE_PASSWORD }}" \
               -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
               ajustadoati/calch-be:latest

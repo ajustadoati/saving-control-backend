@@ -1,5 +1,5 @@
 
-package com.ajustadoati.sc.adapter.rest.advice;
+package com.ajustadoati.sc.adapter.rest.exception;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;

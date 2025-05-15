@@ -8,6 +8,7 @@ import java.time.LocalDate;
 @Data
 public class SupplyPaymentResponse {
   private Integer supplyPaymentId;
+  private Integer supplyId;
   private LocalDate paymentDate;
   private BigDecimal amount;
 }

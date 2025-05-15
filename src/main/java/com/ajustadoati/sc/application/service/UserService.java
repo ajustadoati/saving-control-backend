@@ -1,7 +1,5 @@
 package com.ajustadoati.sc.application.service;
 
-import com.ajustadoati.sc.adapter.rest.advice.AssociationAlreadyExistsException;
-import com.ajustadoati.sc.adapter.rest.dto.request.AssociateRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.CreateUserRequest;
 import com.ajustadoati.sc.adapter.rest.repository.AssociateRepository;
 import com.ajustadoati.sc.adapter.rest.repository.RoleRepository;
@@ -9,7 +7,6 @@ import com.ajustadoati.sc.adapter.rest.repository.SavingRepository;
 import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
 import com.ajustadoati.sc.domain.Saving;
 import com.ajustadoati.sc.domain.User;
-import com.ajustadoati.sc.domain.UserAssociate;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.data.domain.Page;

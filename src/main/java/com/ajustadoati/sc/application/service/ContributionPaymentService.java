@@ -3,9 +3,11 @@ package com.ajustadoati.sc.application.service;
 import com.ajustadoati.sc.adapter.rest.dto.request.ContributionPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.repository.ContributionPaymentRepository;
 import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
+import com.ajustadoati.sc.domain.BalanceHistory;
 import com.ajustadoati.sc.domain.Contribution;
 import com.ajustadoati.sc.domain.ContributionPayment;
 import com.ajustadoati.sc.domain.User;
+import com.ajustadoati.sc.domain.enums.TransactionType;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,8 @@ public class ContributionPaymentService {
   private final UserRepository userRepository;
 
   private final ContributionService contributionService;
+
+  private final BalanceHistoryService balanceHistoryService;
 
   public ContributionPayment save(ContributionPaymentRequest request) {
     userRepository.findById(request.getUserId()).orElseThrow();
@@ -40,8 +44,13 @@ public class ContributionPaymentService {
       throw new IllegalArgumentException("Invalid contribution IDs: " + invalidContributionIds);
     }
 
-    return contributionPaymentRepository.saveAll(requestList.stream().map(this::toEntity).toList());
+    var contributions = contributionPaymentRepository.saveAll(requestList.stream().map(this::toEntity).toList());
+    var balanceHistories = contributions.stream().map(
+        this::balanceHistory)
+      .toList();
 
+    balanceHistoryService.saveList(balanceHistories);
+    return contributions;
   }
 
   ContributionPayment toEntity(ContributionPaymentRequest contributionPaymentRequest) {
@@ -54,4 +63,13 @@ public class ContributionPaymentService {
       .build();
   }
 
+  public BalanceHistory balanceHistory(ContributionPayment contributionPayment) {
+    return BalanceHistory.builder()
+      .transactionDate(contributionPayment.getPaymentDate())
+      .user(contributionPayment.getUser())
+      .description("Contribution Payment")
+      .amount(contributionPayment.getAmount())
+      .transactionType(TransactionType.ADMINISTRATIVE)
+      .build();
+  }
 }

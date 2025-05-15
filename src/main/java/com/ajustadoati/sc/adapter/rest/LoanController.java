@@ -2,6 +2,7 @@ package com.ajustadoati.sc.adapter.rest;
 
 import com.ajustadoati.sc.adapter.rest.dto.request.LoanPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.LoanRequest;
+import com.ajustadoati.sc.adapter.rest.dto.response.LoanPaymentResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.LoanResponse;
 import com.ajustadoati.sc.application.service.LoanService;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,11 @@ public class LoanController {
   @GetMapping("/user/{userId}")
   public ResponseEntity<List<LoanResponse>> getLoansByUser(@PathVariable Integer userId) {
     return ResponseEntity.ok(loanService.getLoansByUser(userId));
+  }
+
+  @GetMapping("/{loanId}/payments")
+  public ResponseEntity<List<LoanPaymentResponse>> getPaymentsByLoan(@PathVariable Integer loanId) {
+    return ResponseEntity.ok(loanService.getPaymentsByLoan(loanId));
   }
 
 }
