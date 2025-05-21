@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -17,4 +18,5 @@ public class DistributionInterestDto {
     private String name;
     private BigDecimal totalBalance;
     private BigDecimal distributedAmount;
+    private LocalDate date;
 }

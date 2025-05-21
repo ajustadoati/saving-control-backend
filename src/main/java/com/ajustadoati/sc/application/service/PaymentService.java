@@ -34,6 +34,8 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.WHEELS;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -287,6 +289,9 @@ public class PaymentService {
     }
 
     private void processOthersPayment(User user, PaymentDetail paymentDetail, LocalDate date, List<PagoDto> pagos) {
+        if (paymentDetail.getPaymentType().equals(WHEELS)){
+            pagos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.CAUCHOS));
+        }
 
         OtherPayment other = new OtherPayment();
         other.setName(paymentDetail.getPaymentType()

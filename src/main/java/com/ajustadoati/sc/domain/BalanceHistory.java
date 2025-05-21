@@ -29,6 +29,7 @@ public class BalanceHistory {
   private LocalDate transactionDate;
 
   @Column(name = "transaction_type", nullable = false, length = 50)
+  @Enumerated(EnumType.STRING)
   private TransactionType transactionType;
 
   @Column(name = "amount", nullable = false, precision = 12, scale = 2)
