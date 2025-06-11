@@ -150,16 +150,18 @@ public class PaymentService {
                 .filter(associateDto -> Util.PARTNERS.contains(associateDto.getRelationship()))
                 .map(AssociateDto::getId)
                 .findFirst();
-            paymentDetail.setUserId(associateId.get());
+            associateId.ifPresent(paymentDetail::setUserId);
+
         } else if (paymentDetail.getPaymentType() == PaymentTypeEnum.CHILDRENS_SAVING) {
             log.info("Creating saving request for children");
             var associateId = associates.stream()
                 .filter(associateDto -> Util.CHILDREN.contains(associateDto.getRelationship()))
                 .map(AssociateDto::getId)
                 .findFirst();
-            paymentDetail.setUserId(associateId.get());
+            associateId.ifPresent(paymentDetail::setUserId);
         }
         savingRequests.add(getSavingRequest(user.getUserId(), paymentDetail, date));
+        log.info("saving dto");
         pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.AHORRO));
     }
 
