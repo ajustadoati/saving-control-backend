@@ -10,6 +10,7 @@ public enum TipoPagoEnum {
   ADMINISTRATIVO("ADMINISTRATIVO", "ADMINISTRATIVO"),
   ABONO_CAPITAL("Abono capital", "PRESTAMOS"),
   ABONO_INTERES("Abono intereses", "PRESTAMOS"),
+  INTERES_EXTERNO("Abono intereses externo", "INTERESES_EXTERNOS"),
   SUMINISTROS("Suministros", "SUMINISTROS"),
   CAUCHOS("Cauchos", "CAUCHOS"),
   OTROS("Otros", "OTROS");

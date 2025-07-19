@@ -118,6 +118,8 @@ public class PaymentService {
             case SUPPLIES -> processSupplies(user, date, paymentDetail, pagoDtos);
             case LOAN_INTEREST_PAYMENT -> processLoanInterest(user, date, paymentDetail, pagoDtos);
             case LOAN_PAYMENT -> processLoan(user, date, paymentDetail, pagoDtos);
+            case LOAN_INTEREST_PAYMENT_EXTERNAL -> processLoanInterest(user, date, paymentDetail, pagoDtos);
+            case LOAN_PAYMENT_EXTERNAL -> processLoan(user, date, paymentDetail, pagoDtos);
             case WHEELS, OTHER_PAYMENTS -> processOthersPayment(user, paymentDetail, date, pagoDtos);
             default -> throw new IllegalArgumentException("Invalid payment type");
         }
@@ -173,7 +175,14 @@ public class PaymentService {
 
     private void processLoanInterest(User user, LocalDate date, PaymentDetail paymentDetail,
                                      List<PagoDto> pagoDtos) {
-        pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.ABONO_INTERES));
+        if ( paymentDetail.getPaymentType() == PaymentTypeEnum.LOAN_INTEREST_PAYMENT_EXTERNAL) {
+            pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.INTERES_EXTERNO));
+            log.info("Processing external loan interest payment");
+        } else {
+            pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.ABONO_INTERES));
+            log.info("Processing internal loan interest payment");
+        }
+
         processLoanInterestPayment(user.getUserId(), paymentDetail, date);
     }
 
@@ -183,6 +192,7 @@ public class PaymentService {
             case LOAN_PAYMENT -> TipoPagoEnum.ABONO_CAPITAL;
             case WHEELS -> TipoPagoEnum.CAUCHOS;
             case OTHER_PAYMENTS -> TipoPagoEnum.OTROS;
+            case LOAN_PAYMENT_EXTERNAL -> TipoPagoEnum.PRESTAMO_EXTERNO;
             default -> throw new IllegalStateException("Unexpected value: " + paymentDetail.getPaymentType());
         };
         pagoDtos.add(buildPagoDto(user, date, paymentDetail, tipoPago));
@@ -216,7 +226,8 @@ public class PaymentService {
                 .toList());
             pagoDtos.stream()
                 .filter(pagoDto -> Set.of(TipoPagoEnum.AHORRO, TipoPagoEnum.ABONO_CAPITAL,
-                        TipoPagoEnum.ABONO_INTERES)
+                        TipoPagoEnum.ABONO_INTERES, TipoPagoEnum.INTERES_EXTERNO
+                        )
                     .contains(pagoDto.getTipoPago()))
                 .forEach(
                     pagoDto -> fundsService.saveFunds(BigDecimal.valueOf(pagoDto.getMonto()), FundsType.ADD));

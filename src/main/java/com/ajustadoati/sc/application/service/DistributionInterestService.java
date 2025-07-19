@@ -5,6 +5,7 @@ import com.ajustadoati.sc.adapter.rest.exception.BalanceAlreadyExistException;
 import com.ajustadoati.sc.application.service.dto.DistributionInterestDto;
 import com.ajustadoati.sc.application.service.enums.FundsType;
 import com.ajustadoati.sc.domain.enums.TransactionType;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -22,6 +23,7 @@ public class DistributionInterestService {
 
     private final FundsService fundsService;
 
+    @Transactional
     public void save(DistributionInterestDto distributionInterestDto) {
         var history = balanceHistoryService.findAllByUserAndDate(distributionInterestDto.getUserId(), distributionInterestDto.getDate());
          if (CollectionUtils.isNotEmpty(history)) {
