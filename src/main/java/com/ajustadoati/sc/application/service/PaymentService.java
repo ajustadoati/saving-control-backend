@@ -176,7 +176,7 @@ public class PaymentService {
     private void processLoanInterest(User user, LocalDate date, PaymentDetail paymentDetail,
                                      List<PagoDto> pagoDtos) {
         if ( paymentDetail.getPaymentType() == PaymentTypeEnum.LOAN_INTEREST_PAYMENT_EXTERNAL) {
-            pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.INTERES_EXTERNO));
+            pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.INTERESES_2));
             log.info("Processing external loan interest payment");
         } else {
             pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.ABONO_INTERES));
@@ -192,7 +192,7 @@ public class PaymentService {
             case LOAN_PAYMENT -> TipoPagoEnum.ABONO_CAPITAL;
             case WHEELS -> TipoPagoEnum.CAUCHOS;
             case OTHER_PAYMENTS -> TipoPagoEnum.OTROS;
-            case LOAN_PAYMENT_EXTERNAL -> TipoPagoEnum.PRESTAMO_EXTERNO;
+            case LOAN_PAYMENT_EXTERNAL -> TipoPagoEnum.PRESTAMOS_2;
             default -> throw new IllegalStateException("Unexpected value: " + paymentDetail.getPaymentType());
         };
         pagoDtos.add(buildPagoDto(user, date, paymentDetail, tipoPago));
@@ -226,7 +226,7 @@ public class PaymentService {
                 .toList());
             pagoDtos.stream()
                 .filter(pagoDto -> Set.of(TipoPagoEnum.AHORRO, TipoPagoEnum.ABONO_CAPITAL,
-                        TipoPagoEnum.ABONO_INTERES, TipoPagoEnum.INTERES_EXTERNO
+                        TipoPagoEnum.ABONO_INTERES, TipoPagoEnum.PRESTAMOS_2
                         )
                     .contains(pagoDto.getTipoPago()))
                 .forEach(

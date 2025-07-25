@@ -95,6 +95,11 @@ public class LoanService {
       .map(this::mapToLoanResponse).toList();
   }
 
+    public List<LoanResponse> getAllLoans() {
+        return loanRepository.findAll().stream()
+            .map(this::mapToLoanResponse).toList();
+    }
+
   public List<Loan> getLoanByStartDate(LocalDate startDate) {
 
     return loanRepository.findByStartDate(startDate);
@@ -115,6 +120,7 @@ public class LoanService {
 
   private LoanResponse mapToLoanResponse(Loan loan) {
     LoanResponse response = new LoanResponse();
+    response.setNumberId(loan.getUser().getNumberId());
     response.setLoanId(loan.getLoanId());
     response.setLoanAmount(loan.getLoanAmount());
     response.setInterestRate(loan.getInterestRate());

@@ -14,4 +14,5 @@ public class LoanResponse {
   private LocalDate startDate;
   private LocalDate endDate;
   private String loanTypeName;
+  private String numberId;
 }

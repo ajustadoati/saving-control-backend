@@ -21,27 +21,33 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LoanController {
 
-  private final LoanService loanService;
+    private final LoanService loanService;
 
-  @PostMapping
-  public ResponseEntity<LoanResponse> createLoan(@RequestBody LoanRequest request) {
-    return ResponseEntity.ok(loanService.createLoan(request));
-  }
+    @PostMapping
+    public ResponseEntity<LoanResponse> createLoan(@RequestBody LoanRequest request) {
+        return ResponseEntity.ok(loanService.createLoan(request));
+    }
 
-  @PostMapping("/payments")
-  public ResponseEntity<Void> registerPayment(@RequestBody LoanPaymentRequest request) {
-    loanService.registerPayment(request);
-    return ResponseEntity.ok().build();
-  }
+    @PostMapping("/payments")
+    public ResponseEntity<Void> registerPayment(@RequestBody LoanPaymentRequest request) {
+        loanService.registerPayment(request);
+        return ResponseEntity.ok()
+            .build();
+    }
 
-  @GetMapping("/user/{userId}")
-  public ResponseEntity<List<LoanResponse>> getLoansByUser(@PathVariable Integer userId) {
-    return ResponseEntity.ok(loanService.getLoansByUser(userId));
-  }
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<LoanResponse>> getLoansByUser(@PathVariable Integer userId) {
+        return ResponseEntity.ok(loanService.getLoansByUser(userId));
+    }
 
-  @GetMapping("/{loanId}/payments")
-  public ResponseEntity<List<LoanPaymentResponse>> getPaymentsByLoan(@PathVariable Integer loanId) {
-    return ResponseEntity.ok(loanService.getPaymentsByLoan(loanId));
-  }
+    @GetMapping
+    public ResponseEntity<List<LoanResponse>> getLoans() {
+        return ResponseEntity.ok(loanService.getAllLoans());
+    }
+
+    @GetMapping("/{loanId}/payments")
+    public ResponseEntity<List<LoanPaymentResponse>> getPaymentsByLoan(@PathVariable Integer loanId) {
+        return ResponseEntity.ok(loanService.getPaymentsByLoan(loanId));
+    }
 
 }
