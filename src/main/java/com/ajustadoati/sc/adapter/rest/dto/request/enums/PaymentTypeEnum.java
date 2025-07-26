@@ -9,8 +9,10 @@ public enum PaymentTypeEnum {
   SUPPLIES("Suministros"),
   LOAN_INTEREST_PAYMENT("Interés de préstamo"),
   LOAN_PAYMENT("Abono a préstamo"),
-  LOAN_INTEREST_PAYMENT_EXTERNAL("Interés de préstamo externo"),
-  LOAN_PAYMENT_EXTERNAL("Abono a préstamo externo"),
+  LOAN_INTEREST_PAYMENT_EXTERNAL("Interés de préstamo 2"),
+  LOAN_EXTERNAL_INTEREST("Interés de préstamo externo"),
+  LOAN_PAYMENT_EXTERNAL("Abono a préstamo 2"),
+  LOAN_EXTERNAL("Abono a préstamo externo"),
   OTHER_PAYMENTS("Otros"),
   WHEELS("Cauchos"),;
 

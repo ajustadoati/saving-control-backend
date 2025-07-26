@@ -178,7 +178,11 @@ public class PaymentService {
         if ( paymentDetail.getPaymentType() == PaymentTypeEnum.LOAN_INTEREST_PAYMENT_EXTERNAL) {
             pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.INTERESES_2));
             log.info("Processing external loan interest payment");
-        } else {
+        } else if (paymentDetail.getPaymentType() == PaymentTypeEnum.LOAN_EXTERNAL_INTEREST) {
+            pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.INTERES_EXTERNO));
+            log.info("Processing external interest payment");
+        }
+        else {
             pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.ABONO_INTERES));
             log.info("Processing internal loan interest payment");
         }
@@ -193,6 +197,7 @@ public class PaymentService {
             case WHEELS -> TipoPagoEnum.CAUCHOS;
             case OTHER_PAYMENTS -> TipoPagoEnum.OTROS;
             case LOAN_PAYMENT_EXTERNAL -> TipoPagoEnum.PRESTAMOS_2;
+            case LOAN_EXTERNAL -> TipoPagoEnum.PRESTAMO_EXTERNO;
             default -> throw new IllegalStateException("Unexpected value: " + paymentDetail.getPaymentType());
         };
         pagoDtos.add(buildPagoDto(user, date, paymentDetail, tipoPago));
