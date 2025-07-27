@@ -46,9 +46,11 @@ public class DistributionInterestService {
 
     }
 
+
     public void saveList(List<DistributionInterestDto> distributionInterestDtoList, LocalDate date) {
         log.info("Saving list");
         distributionInterestDtoList.forEach(distribution -> {
+            log.info("Saving distribution for user: {} amount: {} fecha: {}", distribution.getUserId(), distribution.getDistributedAmount(), date);
             distribution.setDate(date);
             save(distribution);
         });

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +23,12 @@ public class BalanceHistoryService {
   public BalanceHistory save(BalanceHistoryDto history) {
 
     var balance = new BalanceHistory();
-    balance.setTransactionDate(LocalDate.now());
+    if (Objects.isNull(history.transactionDate())) {
+        balance.setTransactionDate(LocalDate.now());
+    } else {
+        balance.setTransactionDate(history.transactionDate());
+    }
+
     var user = new User();
     user.setUserId(history.userId());
     balance.setUser(user);
@@ -46,7 +52,7 @@ public class BalanceHistoryService {
 
   public List<BalanceHistoryDto> findAllByUserAndDate(Integer userId, LocalDate date) {
     var user = userRepository.findById(userId).orElseThrow();
-    return repository.findAllByUser(user).stream().map(
+    return repository.findAllByUserAndTransactionDate(user, date).stream().map(
       balance -> new BalanceHistoryDto(balance.getHistoryId(), balance.getUser().getUserId(),
         balance.getTransactionDate(), balance.getTransactionType(), balance.getAmount(),
         balance.getDescription())).toList();
