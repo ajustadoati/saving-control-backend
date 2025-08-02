@@ -120,6 +120,8 @@ public class PaymentService {
             case LOAN_PAYMENT -> processLoan(user, date, paymentDetail, pagoDtos);
             case LOAN_INTEREST_PAYMENT_EXTERNAL -> processLoanInterest(user, date, paymentDetail, pagoDtos);
             case LOAN_PAYMENT_EXTERNAL -> processLoan(user, date, paymentDetail, pagoDtos);
+            case LOAN_EXTERNAL -> processLoan(user, date, paymentDetail, pagoDtos);
+            case LOAN_EXTERNAL_INTEREST -> processLoanInterest(user, date, paymentDetail, pagoDtos);
             case WHEELS, OTHER_PAYMENTS -> processOthersPayment(user, paymentDetail, date, pagoDtos);
             default -> throw new IllegalArgumentException("Invalid payment type");
         }
