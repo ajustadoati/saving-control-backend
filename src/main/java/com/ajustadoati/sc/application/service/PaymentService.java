@@ -118,6 +118,8 @@ public class PaymentService {
             case SUPPLIES -> processSupplies(user, date, paymentDetail, pagoDtos);
             case LOAN_INTEREST_PAYMENT -> processLoanInterest(user, date, paymentDetail, pagoDtos);
             case LOAN_PAYMENT -> processLoan(user, date, paymentDetail, pagoDtos);
+            case LOAN_SHARING -> processLoan(user, date, paymentDetail, pagoDtos);
+            case LOAN_SHARING_INTEREST -> processLoanInterest(user, date, paymentDetail, pagoDtos);
             case LOAN_INTEREST_PAYMENT_EXTERNAL -> processLoanInterest(user, date, paymentDetail, pagoDtos);
             case LOAN_PAYMENT_EXTERNAL -> processLoan(user, date, paymentDetail, pagoDtos);
             case LOAN_EXTERNAL -> processLoan(user, date, paymentDetail, pagoDtos);
@@ -183,6 +185,9 @@ public class PaymentService {
         } else if (paymentDetail.getPaymentType() == PaymentTypeEnum.LOAN_EXTERNAL_INTEREST) {
             pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.INTERES_EXTERNO));
             log.info("Processing external interest payment");
+        }else if (paymentDetail.getPaymentType() == PaymentTypeEnum.LOAN_SHARING_INTEREST) {
+            pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.INTERES_COMPARTIR));
+            log.info("Processing sharing interest payment");
         }
         else {
             pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.ABONO_INTERES));
@@ -200,6 +205,7 @@ public class PaymentService {
             case OTHER_PAYMENTS -> TipoPagoEnum.OTROS;
             case LOAN_PAYMENT_EXTERNAL -> TipoPagoEnum.PRESTAMOS_2;
             case LOAN_EXTERNAL -> TipoPagoEnum.PRESTAMO_EXTERNO;
+            case LOAN_SHARING -> TipoPagoEnum.PRESTAMO_COMPARTIR;
             default -> throw new IllegalStateException("Unexpected value: " + paymentDetail.getPaymentType());
         };
         pagoDtos.add(buildPagoDto(user, date, paymentDetail, tipoPago));

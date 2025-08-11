@@ -46,6 +46,7 @@ public class SecurityConfig{
             .requestMatchers("/api/contributionTypes/**").hasRole("ADMIN")
             .requestMatchers("/api/contributions/**").hasRole("ADMIN")
             .requestMatchers("/api/funds/**").hasRole("ADMIN")
+            .requestMatchers("/api/sharing-funds/**").hasRole("ADMIN")
             .requestMatchers("/api/summary/**").hasRole("ADMIN")
             .requestMatchers("/api/distributions/**").hasRole("ADMIN")
             .requestMatchers("/api/balance-history/**").hasRole("ADMIN")

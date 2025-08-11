@@ -12,6 +12,7 @@ import com.ajustadoati.sc.adapter.rest.repository.LoanTypeRepository;
 import com.ajustadoati.sc.application.service.enums.FundsType;
 import com.ajustadoati.sc.domain.Loan;
 import com.ajustadoati.sc.domain.LoanPayment;
+import com.ajustadoati.sc.domain.LoanType;
 import com.ajustadoati.sc.domain.enums.TransactionType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class LoanService {
   private final LoanPaymentTypeRepository loanPaymentTypeRepository;
   private final UserService userService;
   private final FundsService fundsService;
+  private final SharingFundsService sharingFundsService;
   private final BalanceHistoryService balanceHistoryService;
 
   public LoanResponse createLoan(LoanRequest request) {
@@ -49,7 +51,13 @@ public class LoanService {
     loan.setLoanType(loanType);
 
     loan = loanRepository.save(loan);
-    fundsService.saveFunds(request.getLoanAmount(), FundsType.SUBTRACT);
+    if (loan.getLoanType().getLoanTypeId() == 4) {
+      log.info("Loan type is sharing, saving funds to sharing funds");
+      sharingFundsService.saveFunds(request.getLoanAmount(), FundsType.SUBTRACT);
+    } else {
+      log.info("Loan type is not sharing, saving funds to funds");
+        fundsService.saveFunds(request.getLoanAmount(), FundsType.SUBTRACT);
+    }
 
     return mapToLoanResponse(loan);
   }
@@ -87,7 +95,14 @@ public class LoanService {
     }
     loanPaymentRepository.save(payment);
     loanRepository.save(loan);
-    fundsService.saveFunds(request.getAmount(), FundsType.ADD);
+      if (loan.getLoanType().getLoanTypeId() == 4) {
+          log.info("Loan type is sharing, adding funds to sharing funds");
+          sharingFundsService.saveFunds(request.getAmount(), FundsType.ADD);
+      } else {
+          log.info("Loan type is not sharing, adding funds to funds");
+          fundsService.saveFunds(request.getAmount(), FundsType.ADD);
+      }
+
   }
 
   public List<LoanResponse> getLoansByUser(Integer userId) {

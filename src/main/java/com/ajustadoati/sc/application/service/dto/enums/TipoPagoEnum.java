@@ -13,6 +13,8 @@ public enum TipoPagoEnum {
   ABONO_INTERES("Abono intereses", "PRESTAMOS"),
   INTERESES_2("Abono intereses externo", "INTERESES_EXTERNOS"),
   INTERES_EXTERNO("Abono intereses externo", "INTERESES_EXTERNOS"),
+  PRESTAMO_COMPARTIR("Prestamo compartir", "PRESTAMOS"),
+  INTERES_COMPARTIR("Interes Prestamo compartir", "INTERES_COMPARTIR"),
   SUMINISTROS("Suministros", "SUMINISTROS"),
   CAUCHOS("Cauchos", "CAUCHOS"),
   OTROS("Otros", "OTROS");
