@@ -4,6 +4,7 @@ import com.ajustadoati.sc.adapter.rest.dto.request.ContributionPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.LoanPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentDetail;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentRequest;
+import com.ajustadoati.sc.adapter.rest.dto.request.PaymentReversalRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.SavingRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.SupplyPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum;
@@ -11,6 +12,9 @@ import com.ajustadoati.sc.adapter.rest.dto.response.AssociateDto;
 import com.ajustadoati.sc.adapter.rest.dto.response.DailyResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse.PaymentStatus;
+import com.ajustadoati.sc.adapter.rest.dto.response.PaymentReversalResponse;
+import com.ajustadoati.sc.adapter.rest.dto.response.PaymentReversalResponse.ReversedPaymentDetail;
+import com.ajustadoati.sc.adapter.rest.repository.*;
 import com.ajustadoati.sc.adapter.rest.repository.ContributionTypeRepository;
 import com.ajustadoati.sc.adapter.rest.repository.PagoRepository;
 import com.ajustadoati.sc.adapter.rest.repository.SavingRepository;
@@ -55,6 +59,11 @@ public class PaymentService {
     private final OtherPaymentService otherPaymentService;
     private final UserAccountSummaryService userAccountSummaryService;
     private final UserSavingsBoxService userSavingsBoxService;
+    private final ContributionPaymentRepository contributionPaymentRepository;
+    private final LoanPaymentRepository loanPaymentRepository;
+    private final SupplyPaymentRepository supplyPaymentRepository;
+    private final OtherPaymentRepository otherPaymentRepository;
+    private final BalanceHistoryService balanceHistoryService;
 
     @Transactional
     public PaymentResponse processPayments(PaymentRequest request) {
@@ -485,5 +494,116 @@ public class PaymentService {
         return result;
     }
 
+    @Transactional
+    public PaymentReversalResponse reversePayments(PaymentReversalRequest request) {
+        log.info("Starting payment reversal for userId: {}, date: {}", request.userId(), request.date());
+        
+        var user = getUser(request.userId());
+        
+        // 1. Buscar todos los pagos del usuario en la fecha específica
+        var pagosToReverse = pagoRepository.findByFechaAndCedula(request.date(), user.getNumberId());
+        
+        if (pagosToReverse.isEmpty()) {
+            log.info("No payments found for userId: {} on date: {}", request.userId(), request.date());
+            return PaymentReversalResponse.noPaymentsFound(request.userId(), request.date(), request.reason());
+        }
+        
+        List<ReversedPaymentDetail> reversedDetails = new ArrayList<>();
+        BigDecimal totalReversedAmount = BigDecimal.ZERO;
+        
+        // 2. Revertir cada tipo de pago
+        for (var pago : pagosToReverse) {
+            BigDecimal amount = pago.getMonto();
+            totalReversedAmount = totalReversedAmount.add(amount);
+            
+            // Crear detalle de reversión
+            reversedDetails.add(new ReversedPaymentDetail(
+                pago.getTipoPago(),
+                amount,
+                pago.getTipoPago().getDescription()
+            ));
+            
+            // Revertir fondos si aplica
+            if (Set.of(TipoPagoEnum.AHORRO, TipoPagoEnum.ABONO_CAPITAL,
+                      TipoPagoEnum.ABONO_INTERES, TipoPagoEnum.PRESTAMOS_2)
+                .contains(pago.getTipoPago())) {
+                fundsService.saveFunds(amount, FundsType.SUBTRACT);
+            }
+        }
+        
+        // 3. Eliminar registros relacionados
+        deleteRelatedPaymentRecords(user, request.date());
+        
+        // 4. Eliminar registros de pago principales
+        pagoRepository.deleteAll(pagosToReverse);
+        
+        // 5. Registrar la reversión en el historial
+        recordPaymentReversal(request.userId(), totalReversedAmount, request.reason());
+        
+        log.info("Payment reversal completed for userId: {}. Total reversed: {}", 
+                request.userId(), totalReversedAmount);
+        
+        return PaymentReversalResponse.success(
+            request.userId(),
+            request.date(),
+            totalReversedAmount,
+            reversedDetails,
+            request.reason()
+        );
+    }
+    
+    private void deleteRelatedPaymentRecords(User user, LocalDate date) {
+        log.info("Deleting related payment records for userId: {}, date: {}", user.getUserId(), date);
+        
+        // Eliminar ahorros
+        var savings = savingRepository.findByUserAndSavingDate(user, date);
+        if (!savings.isEmpty()) {
+            savingRepository.deleteAll(savings);
+            log.info("Deleted {} saving records", savings.size());
+        }
+        
+        // Eliminar pagos de contribuciones
+        var contributionPayments = contributionPaymentRepository.findByUserAndPaymentDate(user, date);
+        if (!contributionPayments.isEmpty()) {
+            contributionPaymentRepository.deleteAll(contributionPayments);
+            log.info("Deleted {} contribution payment records", contributionPayments.size());
+        }
+        
+        // Eliminar pagos de préstamos
+        var loanPayments = loanPaymentRepository.findByUserAndPaymentDate(user, date);
+        if (!loanPayments.isEmpty()) {
+            loanPaymentRepository.deleteAll(loanPayments);
+            log.info("Deleted {} loan payment records", loanPayments.size());
+        }
+        
+        // Eliminar pagos de suministros
+        var supplyPayments = supplyPaymentRepository.findByUserAndPaymentDate(user, date);
+        if (!supplyPayments.isEmpty()) {
+            supplyPaymentRepository.deleteAll(supplyPayments);
+            log.info("Deleted {} supply payment records", supplyPayments.size());
+        }
+        
+        // Eliminar otros pagos
+        var otherPayments = otherPaymentRepository.findByUserAndPaymentDate(user, date);
+        if (!otherPayments.isEmpty()) {
+            otherPaymentRepository.deleteAll(otherPayments);
+            log.info("Deleted {} other payment records", otherPayments.size());
+        }
+    }
+    
+    private void recordPaymentReversal(Integer userId, BigDecimal totalAmount, String reason) {
+        log.info("Recording payment reversal in history for userId: {}, amount: {}", userId, totalAmount);
+        
+        var balanceHistory = BalanceHistory.builder()
+            .user(User.builder().userId(userId).build())
+            .transactionDate(LocalDate.now())
+            .transactionType(com.ajustadoati.sc.domain.enums.TransactionType.PAYMENT_REVERSAL)
+            .amount(totalAmount)
+            .description(reason != null ? reason : "Payment reversal")
+            .build();
+        
+        balanceHistoryService.saveList(List.of(balanceHistory));
+        log.info("Payment reversal recorded successfully in history for userId: {}", userId);
+    }
 
 }

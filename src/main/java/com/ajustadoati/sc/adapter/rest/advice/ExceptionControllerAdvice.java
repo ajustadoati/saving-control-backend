@@ -3,6 +3,7 @@ package com.ajustadoati.sc.adapter.rest.advice;
 import com.ajustadoati.sc.adapter.rest.exception.AssociationAlreadyExistsException;
 import com.ajustadoati.sc.adapter.rest.exception.BalanceAlreadyExistException;
 import com.ajustadoati.sc.adapter.rest.exception.ErrorResponse;
+import com.ajustadoati.sc.adapter.rest.exception.InsufficientFundsException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -124,9 +125,24 @@ public class ExceptionControllerAdvice {
   }
 
   /**
-   * Handles a case for balance exist
+   * Handles a case for insufficient funds
    *
-   * @param ex      {@link BalanceAlreadyExistException}
+   * @param ex      {@link InsufficientFundsException}
+   * @param request input request
+   * @return {@link HttpEntity} containing standard body in case of errors.
+   */
+  @ExceptionHandler(InsufficientFundsException.class)
+  public HttpEntity<ErrorResponse> handleInsufficientFundsException(InsufficientFundsException ex,
+    HttpServletRequest request) {
+
+    return handle(ex, request, HttpStatus.BAD_REQUEST, "Insufficient Funds",
+      ex.getMessage());
+  }
+
+  /**
+   * Handles a case for entity not found
+   *
+   * @param ex      {@link EntityNotFoundException}
    * @param request input request
    * @return {@link HttpEntity} containing standard body in case of errors.
    */

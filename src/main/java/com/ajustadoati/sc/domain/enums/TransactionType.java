@@ -9,6 +9,8 @@ public enum TransactionType {
   LOAN_PAYMENT,
     DISTRIBUTED_INTEREST,
   OTHER_PAYMENTS,
-  WHEELS;
+  WHEELS,
+  WITHDRAWAL,
+  PAYMENT_REVERSAL;
 
 }

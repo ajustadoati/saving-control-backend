@@ -1,8 +1,11 @@
 package com.ajustadoati.sc.adapter.rest;
 
+import com.ajustadoati.sc.adapter.rest.dto.request.WithdrawalRequest;
 import com.ajustadoati.sc.adapter.rest.dto.response.SummaryDto;
+import com.ajustadoati.sc.adapter.rest.dto.response.WithdrawalResponse;
 import com.ajustadoati.sc.application.service.UserAccountSummaryService;
 import com.ajustadoati.sc.domain.UserAccountSummary;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,6 +55,27 @@ public class UserSummaryController {
             new SummaryDto(summary.getUser()
                 .getUserId(), summary.getInitialBalance(),
                 summary.getCurrentBalance(), summary.getLastUpdated()));
+    }
+
+    @PostMapping("/withdraw")
+    public ResponseEntity<WithdrawalResponse> withdrawFunds(@Valid @RequestBody WithdrawalRequest request) {
+        // Obtener balance actual antes del retiro
+        var currentSummary = userAccountSummaryService.findByUserId(request.userId());
+        var previousBalance = currentSummary.getCurrentBalance();
+        
+        // Procesar retiro
+        var updatedSummary = userAccountSummaryService.withdrawFunds(request.userId(), request.amount(), request.description());
+        
+        // Crear respuesta exitosa
+        var response = WithdrawalResponse.success(
+            request.userId(),
+            request.amount(),
+            previousBalance,
+            updatedSummary.getCurrentBalance(),
+            request.description()
+        );
+        
+        return ResponseEntity.ok(response);
     }
 
 }

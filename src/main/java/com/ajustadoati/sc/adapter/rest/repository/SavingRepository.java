@@ -26,6 +26,8 @@ public interface SavingRepository extends JpaRepository<Saving, Long> {
   List<Saving> findByUserAndSavingDateBetween(User user, LocalDate startDate,
       LocalDate endDate);
 
+  List<Saving> findByUserAndSavingDate(User user, LocalDate savingDate);
+
   @Query("SELECT SUM(s.amount) FROM Saving s")
   BigDecimal getTotalAmount();
 

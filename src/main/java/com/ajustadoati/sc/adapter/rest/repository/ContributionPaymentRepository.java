@@ -18,5 +18,7 @@ public interface ContributionPaymentRepository extends JpaRepository<Contributio
 
   List<ContributionPayment> findByUserAndPaymentDateBetween(User user, LocalDate startDate,
     LocalDate endDate);
+    
+  List<ContributionPayment> findByUserAndPaymentDate(User user, LocalDate paymentDate);
 
 }

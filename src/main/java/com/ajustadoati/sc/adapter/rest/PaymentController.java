@@ -2,10 +2,13 @@ package com.ajustadoati.sc.adapter.rest;
 
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentFileRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentRequest;
+import com.ajustadoati.sc.adapter.rest.dto.request.PaymentReversalRequest;
 import com.ajustadoati.sc.adapter.rest.dto.response.DailyResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse;
+import com.ajustadoati.sc.adapter.rest.dto.response.PaymentReversalResponse;
 import com.ajustadoati.sc.application.service.PaymentService;
 import com.ajustadoati.sc.application.service.file.FileService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +40,11 @@ public class PaymentController {
   @GetMapping("/report/{date}")
   public ResponseEntity<DailyResponse> dailyReport(@PathVariable LocalDate date) {
     return ResponseEntity.ok(paymentService.generateDailyReport(date));
+  }
+  
+  @PostMapping("/reverse")
+  public ResponseEntity<PaymentReversalResponse> reversePayments(@Valid @RequestBody PaymentReversalRequest request) {
+    return ResponseEntity.ok(paymentService.reversePayments(request));
   }
 
 }
