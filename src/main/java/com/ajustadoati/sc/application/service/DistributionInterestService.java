@@ -23,6 +23,8 @@ public class DistributionInterestService {
 
     private final FundsService fundsService;
 
+    private final UserAccountSummaryService userAccountSummaryService;
+
     @Transactional
     public void save(DistributionInterestDto distributionInterestDto) {
         var history = balanceHistoryService.findAllByUserAndDate(distributionInterestDto.getUserId(), distributionInterestDto.getDate());
@@ -38,6 +40,9 @@ public class DistributionInterestService {
         }
 
         fundsService.saveFunds(distributionInterestDto.getDistributedAmount(), FundsType.ADD);
+        userAccountSummaryService.updateBalance(distributionInterestDto.getUserId(), distributionInterestDto.getDistributedAmount());
+        userAccountSummaryService.updateInterestBalance(distributionInterestDto.getUserId(), distributionInterestDto.getDistributedAmount());
+
         balanceHistoryService.save(new BalanceHistoryDto(0,
             distributionInterestDto.getUserId(),
             distributionInterestDto.getDate(),

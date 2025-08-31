@@ -4,7 +4,6 @@ import com.ajustadoati.sc.adapter.rest.dto.request.WithdrawalRequest;
 import com.ajustadoati.sc.adapter.rest.dto.response.SummaryDto;
 import com.ajustadoati.sc.adapter.rest.dto.response.WithdrawalResponse;
 import com.ajustadoati.sc.application.service.UserAccountSummaryService;
-import com.ajustadoati.sc.domain.UserAccountSummary;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -32,16 +31,18 @@ public class UserSummaryController {
             new SummaryDto(summary.getUser()
                 .getUserId(), summary.getInitialBalance(),
                 summary.getCurrentBalance(),
+                summary.getInterestEarned(),
                 summary.getLastUpdated()));
     }
 
     @GetMapping
-    public ResponseEntity<List<SummaryDto>> getAlle() {
+    public ResponseEntity<List<SummaryDto>> getAll() {
         var resume = userAccountSummaryService.getAll()
             .stream()
             .map(summary -> new SummaryDto(summary.getUser()
                     .getUserId(), summary.getInitialBalance(),
                 summary.getCurrentBalance(),
+                summary.getInterestEarned(),
                 summary.getLastUpdated())).toList();
 
         return ResponseEntity.ok(resume);
@@ -54,7 +55,7 @@ public class UserSummaryController {
         return ResponseEntity.ok(
             new SummaryDto(summary.getUser()
                 .getUserId(), summary.getInitialBalance(),
-                summary.getCurrentBalance(), summary.getLastUpdated()));
+                summary.getCurrentBalance(), summary.getInterestEarned(), summary.getLastUpdated()));
     }
 
     @PostMapping("/withdraw")
@@ -62,10 +63,10 @@ public class UserSummaryController {
         // Obtener balance actual antes del retiro
         var currentSummary = userAccountSummaryService.findByUserId(request.userId());
         var previousBalance = currentSummary.getCurrentBalance();
-        
+
         // Procesar retiro
         var updatedSummary = userAccountSummaryService.withdrawFunds(request.userId(), request.amount(), request.description());
-        
+
         // Crear respuesta exitosa
         var response = WithdrawalResponse.success(
             request.userId(),
@@ -74,7 +75,7 @@ public class UserSummaryController {
             updatedSummary.getCurrentBalance(),
             request.description()
         );
-        
+
         return ResponseEntity.ok(response);
     }
 

@@ -29,6 +29,9 @@ public class UserAccountSummary {
   @Column(name = "current_balance", nullable = false, precision = 12, scale = 2)
   private BigDecimal currentBalance;
 
+  @Column(name = "interest_earned", nullable = false, precision = 12, scale = 2)
+  private BigDecimal interestEarned;
+
   @Column(name = "last_updated", nullable = false)
   private LocalDate lastUpdated;
 }

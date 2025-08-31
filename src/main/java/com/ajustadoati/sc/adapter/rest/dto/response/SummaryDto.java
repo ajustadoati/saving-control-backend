@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record SummaryDto(Integer userId, BigDecimal initialBalance, BigDecimal currentBalance,
+                         BigDecimal interestEarned,
                          LocalDate lastUpdated) {
 
 }
