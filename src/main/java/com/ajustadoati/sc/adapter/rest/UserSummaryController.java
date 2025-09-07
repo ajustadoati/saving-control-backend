@@ -64,8 +64,13 @@ public class UserSummaryController {
         var currentSummary = userAccountSummaryService.findByUserId(request.userId());
         var previousBalance = currentSummary.getCurrentBalance();
 
-        // Procesar retiro
-        var updatedSummary = userAccountSummaryService.withdrawFunds(request.userId(), request.amount(), request.description());
+        // Procesar retiro con tipo especificado
+        var updatedSummary = userAccountSummaryService.withdrawFunds(
+            request.userId(), 
+            request.amount(), 
+            request.description(),
+            request.withdrawalType()
+        );
 
         // Crear respuesta exitosa
         var response = WithdrawalResponse.success(

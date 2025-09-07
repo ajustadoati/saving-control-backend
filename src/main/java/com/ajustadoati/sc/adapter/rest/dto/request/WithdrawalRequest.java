@@ -1,5 +1,6 @@
 package com.ajustadoati.sc.adapter.rest.dto.request;
 
+import com.ajustadoati.sc.domain.enums.WithdrawalType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -15,6 +16,9 @@ public record WithdrawalRequest(
         @DecimalMin(value = "0.01", message = "Minimum withdrawal amount is 0.01")
         BigDecimal amount,
         
-        String description
+        String description,
+        
+        @NotNull(message = "Withdrawal type is required")
+        WithdrawalType withdrawalType
 ) {
 }

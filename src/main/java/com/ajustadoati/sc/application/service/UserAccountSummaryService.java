@@ -8,6 +8,7 @@ import com.ajustadoati.sc.domain.BalanceHistory;
 import com.ajustadoati.sc.domain.User;
 import com.ajustadoati.sc.domain.UserAccountSummary;
 import com.ajustadoati.sc.domain.enums.TransactionType;
+import com.ajustadoati.sc.domain.enums.WithdrawalType;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -73,47 +74,80 @@ public class UserAccountSummaryService {
 
     }
 
-  public UserAccountSummary withdrawFunds(Integer userId, BigDecimal amount, String description) {
-    log.info("Processing withdrawal for userId: {}, amount: {}", userId, amount);
+  public UserAccountSummary withdrawFunds(Integer userId, BigDecimal amount, String description, WithdrawalType withdrawalType) {
+    log.info("Processing withdrawal for userId: {}, amount: {}, type: {}", userId, amount, withdrawalType);
 
     var userAccount = repository.findByUser_UserId(userId)
         .orElseThrow(() -> new EntityNotFoundException("User account not found for userId: " + userId));
 
-    var currentBalance = userAccount.getCurrentBalance();
-
-    // Validar que hay fondos suficientes
-    if (currentBalance.compareTo(amount) < 0) {
-      log.warn("Insufficient funds for userId: {}. Available: {}, Requested: {}",
-               userId, currentBalance, amount);
-      throw new InsufficientFundsException(currentBalance, amount);
+    // Obtener el balance disponible según el tipo de retiro
+    BigDecimal availableBalance;
+    if (withdrawalType == WithdrawalType.INTEREST) {
+      availableBalance = userAccount.getInterestEarned();
+    } else {
+      availableBalance = userAccount.getCurrentBalance();
     }
 
-    // Realizar el retiro (restar del balance actual)
-    var newBalance = currentBalance.subtract(amount);
-    userAccount.setCurrentBalance(newBalance);
-    userAccount.setLastUpdated(LocalDate.now());
+    // Validar que hay fondos suficientes
+    if (availableBalance.compareTo(amount) < 0) {
+      log.warn("Insufficient funds for userId: {}. Available {}: {}, Requested: {}",
+               userId, withdrawalType, availableBalance, amount);
+      throw new InsufficientFundsException(availableBalance, amount);
+    }
 
+    // Realizar el retiro según el tipo
+    if (withdrawalType == WithdrawalType.INTEREST) {
+      // Retirar de los intereses ganados
+      var newInterestBalance = userAccount.getInterestEarned().subtract(amount);
+      userAccount.setInterestEarned(newInterestBalance);
+      log.info("Interest withdrawal: New interest balance: {}", newInterestBalance);
+    } else {
+      // Retirar del balance total
+      var newBalance = userAccount.getCurrentBalance().subtract(amount);
+      userAccount.setCurrentBalance(newBalance);
+      log.info("Total balance withdrawal: New balance: {}", newBalance);
+    }
+
+    userAccount.setLastUpdated(LocalDate.now());
     var updatedAccount = repository.save(userAccount);
-    log.info("Withdrawal successful for userId: {}. New balance: {}", userId, newBalance);
+
+    log.info("Withdrawal successful for userId: {}. Withdrawal type: {}", userId, withdrawalType);
 
     // Registrar la transacción en el historial
-    recordWithdrawalTransaction(userId, amount, description);
+    recordWithdrawalTransaction(userId, amount, description, withdrawalType);
 
     return updatedAccount;
   }
 
-  private void recordWithdrawalTransaction(Integer userId, BigDecimal amount, String description) {
-    log.info("Recording withdrawal transaction for userId: {}, amount: {}", userId, amount);
+  // Mantener el método original para compatibilidad
+  public UserAccountSummary withdrawFunds(Integer userId, BigDecimal amount, String description) {
+    return withdrawFunds(userId, amount, description, WithdrawalType.TOTAL_BALANCE);
+  }
+
+  private void recordWithdrawalTransaction(Integer userId, BigDecimal amount, String description, WithdrawalType withdrawalType) {
+    log.info("Recording withdrawal transaction for userId: {}, amount: {}, type: {}", userId, amount, withdrawalType);
+
+    String enhancedDescription = description != null ? description : "Withdrawal";
+    if (withdrawalType == WithdrawalType.INTEREST) {
+      enhancedDescription += " (Interest withdrawal)";
+    } else {
+      enhancedDescription += " (Total balance withdrawal)";
+    }
 
     var balanceHistory = BalanceHistory.builder()
         .user(User.builder().userId(userId).build())
         .transactionDate(LocalDate.now())
         .transactionType(TransactionType.WITHDRAWAL)
         .amount(amount)
-        .description(description != null ? description : "Withdrawal")
+        .description(enhancedDescription)
         .build();
 
     balanceHistoryService.saveList(List.of(balanceHistory));
     log.info("Withdrawal transaction recorded successfully for userId: {}", userId);
+  }
+
+  // Método de compatibilidad para el método original
+  private void recordWithdrawalTransaction(Integer userId, BigDecimal amount, String description) {
+    recordWithdrawalTransaction(userId, amount, description, WithdrawalType.TOTAL_BALANCE);
   }
 }
