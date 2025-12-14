@@ -17,6 +17,7 @@ public class LoanRequest {
   private BigDecimal loanAmount;
   private BigDecimal interestRate;
   private BigDecimal loanBalance;
+  private String reason;
   private LocalDate startDate;
   private LocalDate endDate;
   private Integer loanTypeId;

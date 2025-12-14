@@ -13,6 +13,7 @@ public class LoanResponse {
   private BigDecimal loanBalance;
   private LocalDate startDate;
   private LocalDate endDate;
+  private String reason;
   private String loanTypeName;
   private String numberId;
 }

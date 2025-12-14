@@ -32,6 +32,8 @@ public class Loan {
   @Column(precision = 10)
   private BigDecimal loanBalance;
 
+  private String reason;
+
   private LocalDate startDate;
 
   private LocalDate endDate;

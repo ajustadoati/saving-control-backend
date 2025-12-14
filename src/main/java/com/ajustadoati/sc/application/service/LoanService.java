@@ -47,6 +47,7 @@ public class LoanService {
     loan.setInterestRate(request.getInterestRate());
     loan.setLoanBalance(request.getLoanBalance());
     loan.setStartDate(request.getStartDate());
+    loan.setReason(request.getReason());
     loan.setEndDate(request.getEndDate());
     loan.setLoanType(loanType);
 
@@ -141,6 +142,7 @@ public class LoanService {
     response.setInterestRate(loan.getInterestRate());
     response.setLoanBalance(loan.getLoanBalance());
     response.setStartDate(loan.getStartDate());
+    response.setReason(loan.getReason());
     response.setEndDate(loan.getEndDate());
     response.setLoanTypeName(loan.getLoanType().getLoanTypeName());
     return response;
