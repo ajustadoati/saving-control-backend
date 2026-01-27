@@ -18,5 +18,6 @@ public class DistributionInterestDto {
     private String name;
     private BigDecimal totalBalance;
     private BigDecimal distributedAmount;
+    private BigDecimal interest;
     private LocalDate date;
 }

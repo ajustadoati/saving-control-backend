@@ -487,6 +487,11 @@ public class PaymentService {
                 .userId(user.getUserId())
                 .name(user.getFirstName() + " " + user.getLastName())
                 .totalBalance(balances.get(user).setScale(2, RoundingMode.HALF_UP))
+                    .interest(
+                            balances.get(user)
+                                    .multiply(BigDecimal.valueOf(100))
+                                    .divide(totalBalance, 2, RoundingMode.HALF_UP)
+                    )
                 .distributedAmount(entry.getValue())
                 .build());
         }
