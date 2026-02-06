@@ -428,13 +428,18 @@ public class PaymentService {
 
         socios.forEach(user -> {
             BigDecimal balance = userAccountSummaryService.findByUserId(user.getUser().getUserId()).getCurrentBalance();
-            balances.put(user.getUser(), balance);
+            if(balance.doubleValue() > 0) {
+                balances.put(user.getUser(), balance);
+            }
         });
 
         asociados.forEach(user -> {
             BigDecimal balance = userAccountSummaryService.findByUserId(user.getUserAssociate().getUserId()).getCurrentBalance();
-            balances.put(user.getUserAssociate(), balance);
+            if(balance.doubleValue() > 0) {
+                balances.put(user.getUserAssociate(), balance);
+            }
         });
+
 
         BigDecimal totalBalance = balances.values().stream()
             .reduce(BigDecimal.ZERO, BigDecimal::add);
