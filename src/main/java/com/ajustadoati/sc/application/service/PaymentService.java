@@ -14,6 +14,7 @@ import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse.PaymentStatus;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentReversalResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentReversalResponse.ReversedPaymentDetail;
+import com.ajustadoati.sc.adapter.rest.dto.response.WeeklySummaryResponse;
 import com.ajustadoati.sc.adapter.rest.repository.*;
 import com.ajustadoati.sc.adapter.rest.repository.ContributionTypeRepository;
 import com.ajustadoati.sc.adapter.rest.repository.PagoRepository;
@@ -53,6 +54,7 @@ public class PaymentService {
     private final PagoMapper pagoMapper;
     private final PagoRepository pagoRepository;
     private final LoanService loanService;
+    private final LoanRepository loanRepository;
     private final FundsService fundsService;
     private final AssociateService associateService;
     private final SupplyService supplyService;
@@ -403,7 +405,9 @@ public class PaymentService {
             .collect(Collectors.groupingBy(PagoDto::getTipoPago,
                 Collectors.summingDouble(PagoDto::getMonto)));
 
-        BigDecimal interestAmount = BigDecimal.valueOf(totalPorTipoPago.get(TipoPagoEnum.ABONO_INTERES));
+        BigDecimal interestAmount = BigDecimal.valueOf(
+            totalPorTipoPago.getOrDefault(TipoPagoEnum.ABONO_INTERES, 0.0)
+        );
 
         Double montoTotalPagos = pagosDelDia.stream()
             .mapToDouble(PagoDto::getMonto)
@@ -413,6 +417,109 @@ public class PaymentService {
 
         return new DailyResponse(fecha, pagosAgrupados, totalPorTipoPago, totalLoans, montoTotalPagos,
             montoTotal, null, distribuirIntereses(interestAmount));
+    }
+
+    public WeeklySummaryResponse getLatestWednesdaySummary() {
+        var latestWednesday = pagoRepository.findLatestWednesdayWithPayments();
+        if (latestWednesday.isEmpty()) {
+            return WeeklySummaryResponse.builder()
+                .message("No hay pagos registrados en miércoles.")
+                .build();
+        }
+
+        return buildWeeklyCajaSummary(latestWednesday.get());
+    }
+
+    public WeeklySummaryResponse getWeeklySummaryForDate(LocalDate date) {
+        return buildWeeklyCajaSummary(date);
+    }
+
+    private double sumTypes(Map<TipoPagoEnum, Double> totals, Set<TipoPagoEnum> types) {
+        return totals.entrySet().stream()
+            .filter(entry -> types.contains(entry.getKey()))
+            .mapToDouble(entry -> Objects.requireNonNullElse(entry.getValue(), 0.0))
+            .sum();
+    }
+
+    private WeeklySummaryResponse buildWeeklyCajaSummary(LocalDate date) {
+        var dailyReport = generateDailyReport(date);
+        if (dailyReport.getTotalPorTipoPago() == null) {
+            return WeeklySummaryResponse.builder()
+                .date(date)
+                .message("No se encontraron pagos para el miércoles más reciente.")
+                .build();
+        }
+
+        var totals = dailyReport.getTotalPorTipoPago();
+
+        double ahorro = sumTypes(totals, EnumSet.of(TipoPagoEnum.AHORRO));
+        double intereses1 = sumTypes(totals, EnumSet.of(TipoPagoEnum.ABONO_INTERES));
+        double capital1 = sumTypes(totals, EnumSet.of(TipoPagoEnum.ABONO_CAPITAL));
+        double capital2 = sumTypes(totals, EnumSet.of(TipoPagoEnum.PRESTAMOS_2));
+        double capitalExt = sumTypes(totals, EnumSet.of(TipoPagoEnum.PRESTAMO_EXTERNO));
+
+        double ingresos = ahorro + intereses1 + capital1 + capital2 + capitalExt;
+        double egresos = Objects.requireNonNullElse(dailyReport.getTotalPrestamos(), 0.0);
+        double totalDia = ingresos - egresos;
+
+        BigDecimal saldoAnterior = calculateSaldoAnterior(date);
+        BigDecimal saldoFinal = saldoAnterior.add(BigDecimal.valueOf(totalDia));
+
+        return WeeklySummaryResponse.builder()
+            .date(date)
+            .ahorro(ahorro)
+            .intereses1(intereses1)
+            .capital1(capital1)
+            .capital2(capital2)
+            .capitalExt(capitalExt)
+            .ingresos(ingresos)
+            .egresos(egresos)
+            .totalDia(totalDia)
+            .saldoAnterior(saldoAnterior.doubleValue())
+            .saldoFinal(saldoFinal.doubleValue())
+            .interestIncome(intereses1)
+            .savingsIncome(ahorro)
+            .loanPrincipalIncome(capital1)
+            .loansOutflow(egresos)
+            .build();
+    }
+
+    private BigDecimal calculateSaldoAnterior(LocalDate date) {
+        var previousWednesday = pagoRepository.findPreviousWednesdayWithPayments(date);
+        if (previousWednesday.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(calculateTotalDia(previousWednesday.get()));
+    }
+
+    private BigDecimal sumPagosBefore(LocalDate date, Set<TipoPagoEnum> types) {
+        var rows = pagoRepository.sumByTipoPagoBefore(date, types);
+        BigDecimal total = BigDecimal.ZERO;
+        for (Object[] row : rows) {
+            if (row.length < 2 || row[1] == null) {
+                continue;
+            }
+            total = total.add((BigDecimal) row[1]);
+        }
+        return total;
+    }
+
+    private double calculateTotalDia(LocalDate date) {
+        var dailyReport = generateDailyReport(date);
+        if (dailyReport.getTotalPorTipoPago() == null) {
+            return 0.0;
+        }
+        var totals = dailyReport.getTotalPorTipoPago();
+
+        double ahorro = sumTypes(totals, EnumSet.of(TipoPagoEnum.AHORRO));
+        double intereses1 = sumTypes(totals, EnumSet.of(TipoPagoEnum.ABONO_INTERES));
+        double capital1 = sumTypes(totals, EnumSet.of(TipoPagoEnum.ABONO_CAPITAL));
+        double capital2 = sumTypes(totals, EnumSet.of(TipoPagoEnum.PRESTAMOS_2));
+        double capitalExt = sumTypes(totals, EnumSet.of(TipoPagoEnum.PRESTAMO_EXTERNO));
+
+        double ingresos = ahorro + intereses1 + capital1 + capital2 + capitalExt;
+        double egresos = Objects.requireNonNullElse(dailyReport.getTotalPrestamos(), 0.0);
+        return ingresos - egresos;
     }
 
     public List<DistributionInterestDto> distribuirIntereses(BigDecimal montoTotal) {

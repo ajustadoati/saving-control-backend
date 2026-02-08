@@ -6,6 +6,7 @@ import com.ajustadoati.sc.adapter.rest.dto.request.PaymentReversalRequest;
 import com.ajustadoati.sc.adapter.rest.dto.response.DailyResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentReversalResponse;
+import com.ajustadoati.sc.adapter.rest.dto.response.WeeklySummaryResponse;
 import com.ajustadoati.sc.application.service.PaymentService;
 import com.ajustadoati.sc.application.service.file.FileService;
 import jakarta.validation.Valid;
@@ -40,6 +41,16 @@ public class PaymentController {
   @GetMapping("/report/{date}")
   public ResponseEntity<DailyResponse> dailyReport(@PathVariable LocalDate date) {
     return ResponseEntity.ok(paymentService.generateDailyReport(date));
+  }
+
+  @GetMapping("/report/latest-wednesday")
+  public ResponseEntity<WeeklySummaryResponse> latestWednesdaySummary() {
+    return ResponseEntity.ok(paymentService.getLatestWednesdaySummary());
+  }
+
+  @GetMapping("/report/summary/{date}")
+  public ResponseEntity<WeeklySummaryResponse> weeklySummaryByDate(@PathVariable LocalDate date) {
+    return ResponseEntity.ok(paymentService.getWeeklySummaryForDate(date));
   }
   
   @PostMapping("/reverse")

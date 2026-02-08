@@ -1,15 +1,14 @@
 spring:
   datasource:
-    url: ${DATASOURCE_URL:jdbc:mysql://ajustadoati.com:3307/calch_bk}
-    username: ${DATASOURCE_USERNAME:bcvcvc}
-    password: ${DATASOURCE_PASSWORD:vxvxvx}
+    url: ${DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/calch}
+    username: ${DATASOURCE_USERNAME:root}
+    password: ${DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hibernate:
       ddl-auto: none
     show-sql: false
     properties:
       hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
-    initialization-mode: always
     hikari:
       minimum-idle: 5
       maximum-pool-size: 30
