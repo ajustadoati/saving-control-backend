@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -72,6 +73,16 @@ public class UserController {
         userModelAssembler.toPagedModel(users, pagedResourcesAssembler);
 
     return ResponseEntity.ok(pagedModel);
+  }
+
+  @GetMapping("/search")
+  public ResponseEntity<CollectionModel<EntityModel<UserDto>>> searchUsers(
+      @RequestParam("query") String query) {
+    List<User> users = userService.searchUsersByName(query);
+    List<EntityModel<UserDto>> userModels = users.stream()
+        .map(userModelAssembler::toModel)
+        .toList();
+    return ResponseEntity.ok(CollectionModel.of(userModels));
   }
 
   @PatchMapping("/{id}")

@@ -16,8 +16,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -123,6 +125,26 @@ public class UserService {
 
   public Page<User> getAllUsers(Pageable pageable) {
     return userRepository.findAll(pageable);
+  }
+
+  public List<User> searchUsersByName(String query) {
+    if (query == null || query.trim().isEmpty()) {
+      return List.of();
+    }
+
+    String normalized = query.trim();
+    String[] parts = normalized.split("\\s+");
+
+    if (parts.length >= 2) {
+      String first = parts[0];
+      String last = parts[1];
+      Set<User> results = new HashSet<>();
+      results.addAll(userRepository.findByFirstNameContainingIgnoreCaseAndLastNameContainingIgnoreCase(first, last));
+      results.addAll(userRepository.findByFirstNameContainingIgnoreCaseAndLastNameContainingIgnoreCase(last, first));
+      return results.stream().toList();
+    }
+
+    return userRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(normalized, normalized);
   }
 
 
