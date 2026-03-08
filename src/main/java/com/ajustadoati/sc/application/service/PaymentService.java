@@ -39,6 +39,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.OTHER_PAYMENTS;
 import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.WHEELS;
 
 @Service
@@ -330,9 +331,17 @@ public class PaymentService {
             pagos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.CAUCHOS));
         }
 
+        if (paymentDetail.getPaymentType().equals(OTHER_PAYMENTS)){
+            pagos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.OTROS));
+        }
+
+
         OtherPayment other = new OtherPayment();
-        other.setName(paymentDetail.getPaymentType()
-            .name());
+        String reason = paymentDetail.getReason();
+        if (reason == null || reason.trim().isEmpty()) {
+            reason = paymentDetail.getPaymentType().name();
+        }
+        other.setName(reason);
         other.setUser(user);
         other.setAmount(paymentDetail.getAmount());
         other.setPaymentDate(date);

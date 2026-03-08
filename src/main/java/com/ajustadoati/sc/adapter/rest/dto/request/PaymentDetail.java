@@ -12,4 +12,5 @@ public class PaymentDetail {
       private Integer referenceId;
       private BigDecimal amount;
       private Integer userId;
+      private String reason;
 }
