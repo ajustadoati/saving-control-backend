@@ -133,6 +133,18 @@ CREATE TABLE other_payment (
     FOREIGN KEY (user_id) REFERENCES user(user_id)
 );
 
+CREATE TABLE distribution_interest (
+    distribution_interest_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    distribution_date DATE NOT NULL,
+    total_balance DECIMAL(12, 2) NOT NULL,
+    interest_percent DECIMAL(8, 4) NOT NULL,
+    distributed_amount DECIMAL(12, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_distribution_user_date (user_id, distribution_date),
+    FOREIGN KEY (user_id) REFERENCES user(user_id)
+);
+
 CREATE TABLE supply (
     supply_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -200,7 +212,6 @@ INSERT INTO `user` (first_name,last_name,number_id,mobile_number,email,created_a
 
 INSERT INTO `role` (role_name) VALUES
 	 ('ADMIN');
-
 
 
 

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -27,5 +28,9 @@ public interface PagoRepository extends JpaRepository<Pago, Integer> {
     "where p.fecha < :date and p.tipoPago in :types group by p.tipoPago")
   List<Object[]> sumByTipoPagoBefore(@Param("date") LocalDate date,
                                      @Param("types") Collection<TipoPagoEnum> types);
+
+  @Query("select coalesce(sum(p.monto), 0) from Pago p where p.fecha = :date and p.tipoPago = :tipoPago")
+  BigDecimal sumMontoByFechaAndTipoPago(@Param("date") LocalDate date,
+                                        @Param("tipoPago") TipoPagoEnum tipoPago);
 
 }

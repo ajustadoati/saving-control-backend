@@ -8,13 +8,9 @@ import com.ajustadoati.sc.adapter.rest.dto.request.PaymentReversalRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.SavingRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.SupplyPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum;
-import com.ajustadoati.sc.adapter.rest.dto.response.AssociateDto;
-import com.ajustadoati.sc.adapter.rest.dto.response.DailyResponse;
-import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse;
+import com.ajustadoati.sc.adapter.rest.dto.response.*;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse.PaymentStatus;
-import com.ajustadoati.sc.adapter.rest.dto.response.PaymentReversalResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentReversalResponse.ReversedPaymentDetail;
-import com.ajustadoati.sc.adapter.rest.dto.response.WeeklySummaryResponse;
 import com.ajustadoati.sc.adapter.rest.repository.*;
 import com.ajustadoati.sc.adapter.rest.repository.ContributionTypeRepository;
 import com.ajustadoati.sc.adapter.rest.repository.PagoRepository;
@@ -67,6 +63,7 @@ public class PaymentService {
     private final SupplyPaymentRepository supplyPaymentRepository;
     private final OtherPaymentRepository otherPaymentRepository;
     private final BalanceHistoryService balanceHistoryService;
+    private final DistributionInterestService distributionInterestService;
 
     @Transactional
     public PaymentResponse processPayments(PaymentRequest request) {
@@ -272,20 +269,11 @@ public class PaymentService {
     }
 
     private void processLoanPayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
-        var loans = loanService.getLoansByUser(userId);
-        var loan = loans.stream()
-            .filter(loanResponse -> Objects.equals(loanResponse.getLoanId(),
-                paymentDetail.getReferenceId()))
-            .findFirst();
-        loan.ifPresent(loanResponse -> {
-            var request = LoanPaymentRequest.builder()
-                .loanId(loanResponse.getLoanId())
-                .paymentDate(date)
-                .paymentTypeId(1)
-                .amount(paymentDetail.getAmount())
-                .build();
-            loanService.registerPayment(request);
-        });
+        if (paymentDetail.getReferenceId() != null) {
+            applyLoanPaymentById(paymentDetail.getReferenceId(), date, paymentDetail.getAmount(), 1);
+            return;
+        }
+        distributePaymentByLoanType(userId, date, paymentDetail.getPaymentType(), paymentDetail.getAmount(), 1);
     }
 
     private void processWheelsPayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
@@ -293,21 +281,61 @@ public class PaymentService {
 
     private void processLoanInterestPayment(Integer userId, PaymentDetail paymentDetail,
                                             LocalDate date) {
-        var loans = loanService.getLoansByUser(userId);
-        var loan = loans.stream()
-            .filter(loanResponse -> Objects.equals(loanResponse.getLoanId(),
-                paymentDetail.getReferenceId()))
-            .findFirst();
-        loan.ifPresent(loanResponse -> {
-            var request = LoanPaymentRequest.builder()
-                .loanId(loanResponse.getLoanId())
-                .paymentDate(date)
-                .paymentTypeId(2)
-                .amount(paymentDetail.getAmount())
-                .build();
-            loanService.registerPayment(request);
-        });
+        if (paymentDetail.getReferenceId() != null) {
+            applyLoanPaymentById(paymentDetail.getReferenceId(), date, paymentDetail.getAmount(), 2);
+            return;
+        }
+        distributePaymentByLoanType(userId, date, paymentDetail.getPaymentType(), paymentDetail.getAmount(), 2);
 
+    }
+
+    private void applyLoanPaymentById(Integer loanId, LocalDate date, BigDecimal amount, int paymentTypeId) {
+        var request = LoanPaymentRequest.builder()
+            .loanId(loanId)
+            .paymentDate(date)
+            .paymentTypeId(paymentTypeId)
+            .amount(amount)
+            .build();
+        loanService.registerPayment(request);
+    }
+
+    private void distributePaymentByLoanType(Integer userId, LocalDate date, PaymentTypeEnum paymentType,
+                                              BigDecimal amount, int paymentTypeId) {
+        String loanTypeName = mapLoanTypeName(paymentType);
+        if (loanTypeName == null) {
+            throw new IllegalArgumentException("Loan type not supported for payment type: " + paymentType);
+        }
+
+        var loans = loanService.getLoansByUser(userId).stream()
+            .filter(loan -> loan.getLoanTypeName() != null
+                && loan.getLoanTypeName().trim().equalsIgnoreCase(loanTypeName))
+            .filter(loan -> loan.getLoanBalance() != null && loan.getLoanBalance().compareTo(BigDecimal.ZERO) > 0)
+            .toList();
+
+        if (loans.isEmpty()) {
+            throw new IllegalArgumentException("No active loans for type: " + loanTypeName);
+        }
+
+        BigDecimal remaining = amount;
+        for (var loan : loans) {
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+                break;
+            }
+            BigDecimal balance = loan.getLoanBalance();
+            BigDecimal payment = remaining.min(balance);
+            applyLoanPaymentById(loan.getLoanId(), date, payment, paymentTypeId);
+            remaining = remaining.subtract(payment);
+        }
+    }
+
+    private String mapLoanTypeName(PaymentTypeEnum paymentType) {
+        return switch (paymentType) {
+            case LOAN_PAYMENT, LOAN_INTEREST_PAYMENT -> "Préstamos1";
+            case LOAN_PAYMENT_EXTERNAL, LOAN_INTEREST_PAYMENT_EXTERNAL -> "Préstamos2";
+            case LOAN_EXTERNAL, LOAN_EXTERNAL_INTEREST -> "Externos";
+            case LOAN_SHARING, LOAN_SHARING_INTEREST -> "Compartir";
+            default -> null;
+        };
     }
 
     private void processSuppliesPayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
@@ -425,7 +453,15 @@ public class PaymentService {
         Double montoTotal = montoTotalPagos - totalLoans;
 
         return new DailyResponse(fecha, pagosAgrupados, totalPorTipoPago, totalLoans, montoTotalPagos,
-            montoTotal, null, distribuirIntereses(interestAmount));
+            montoTotal, null, distributionInterestService.getByDate(fecha));
+    }
+
+    public List<DistributionInterestDto> calculateDistributionForDate(LocalDate date) {
+        BigDecimal interestAmount = pagoRepository.sumMontoByFechaAndTipoPago(date, TipoPagoEnum.ABONO_INTERES);
+        if (interestAmount == null || interestAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return List.of();
+        }
+        return distribuirIntereses(interestAmount);
     }
 
     public WeeklySummaryResponse getLatestWednesdaySummary() {

@@ -2,8 +2,11 @@ package com.ajustadoati.sc.application.service;
 
 import com.ajustadoati.sc.adapter.rest.dto.response.BalanceHistoryDto;
 import com.ajustadoati.sc.adapter.rest.exception.BalanceAlreadyExistException;
+import com.ajustadoati.sc.adapter.rest.repository.DistributionInterestRepository;
 import com.ajustadoati.sc.application.service.dto.DistributionInterestDto;
 import com.ajustadoati.sc.application.service.enums.FundsType;
+import com.ajustadoati.sc.domain.DistributionInterest;
+import com.ajustadoati.sc.domain.User;
 import com.ajustadoati.sc.domain.enums.TransactionType;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +15,9 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -25,19 +30,26 @@ public class DistributionInterestService {
 
     private final UserAccountSummaryService userAccountSummaryService;
 
+    private final DistributionInterestRepository distributionInterestRepository;
+
     @Transactional
     public void save(DistributionInterestDto distributionInterestDto) {
-        var history = balanceHistoryService.findAllByUserAndDate(distributionInterestDto.getUserId(), distributionInterestDto.getDate());
-         if (CollectionUtils.isNotEmpty(history)) {
-            var result = history.stream()
-                .filter(h -> h.transactionType()
-                    .equals(TransactionType.DISTRIBUTED_INTEREST))
-                .toList();
-            if (CollectionUtils.isNotEmpty(result)) {
-                log.info("Balance exists for user {} {}", distributionInterestDto.getUserId(), distributionInterestDto.getName());
-                throw new BalanceAlreadyExistException("Balance exists for user: " + distributionInterestDto.getUserId());
-            }
+        if (distributionInterestRepository.existsByUser_UserIdAndDistributionDate(
+            distributionInterestDto.getUserId(), distributionInterestDto.getDate())) {
+            log.info("Distribution exists for user {} {}", distributionInterestDto.getUserId(), distributionInterestDto.getName());
+            throw new BalanceAlreadyExistException("Distribution exists for user: " + distributionInterestDto.getUserId());
         }
+
+        DistributionInterest entity = DistributionInterest.builder()
+            .user(User.builder().userId(distributionInterestDto.getUserId()).build())
+            .distributionDate(distributionInterestDto.getDate())
+            .totalBalance(distributionInterestDto.getTotalBalance())
+            .interestPercent(distributionInterestDto.getInterest())
+            .distributedAmount(distributionInterestDto.getDistributedAmount())
+            .createdAt(LocalDateTime.now())
+            .build();
+
+        distributionInterestRepository.save(entity);
 
         fundsService.saveFunds(distributionInterestDto.getDistributedAmount(), FundsType.ADD);
         userAccountSummaryService.updateBalance(distributionInterestDto.getUserId(), distributionInterestDto.getDistributedAmount());
@@ -60,6 +72,27 @@ public class DistributionInterestService {
             save(distribution);
         });
 
+    }
+
+    public List<DistributionInterestDto> getByDate(LocalDate date) {
+        return distributionInterestRepository.findByDistributionDate(date)
+            .stream()
+            .map(this::toDto)
+            .collect(Collectors.toList());
+    }
+
+    private DistributionInterestDto toDto(DistributionInterest entity) {
+        String name = entity.getUser() != null
+            ? entity.getUser().getFirstName() + " " + entity.getUser().getLastName()
+            : "";
+        return DistributionInterestDto.builder()
+            .userId(entity.getUser() != null ? entity.getUser().getUserId() : null)
+            .name(name)
+            .totalBalance(entity.getTotalBalance())
+            .interest(entity.getInterestPercent())
+            .distributedAmount(entity.getDistributedAmount())
+            .date(entity.getDistributionDate())
+            .build();
     }
 
 }
