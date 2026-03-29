@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -39,6 +40,12 @@ public class DistributionInterestController {
         }
         distributionInterestService.saveList(distributions, localDate);
         return ResponseEntity.ok(distributions);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<DistributionInterestDto>> getByDate(@RequestParam("date") String date) {
+        var localDate = java.time.LocalDate.parse(date);
+        return ResponseEntity.ok(distributionInterestService.getByDate(localDate));
     }
 
 }
