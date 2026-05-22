@@ -9,5 +9,7 @@ import java.util.List;
 public interface DistributionInterestRepository extends JpaRepository<DistributionInterest, Integer> {
   boolean existsByUser_UserIdAndDistributionDate(Integer userId, LocalDate distributionDate);
 
+  boolean existsByDistributionDate(LocalDate distributionDate);
+
   List<DistributionInterest> findByDistributionDate(LocalDate distributionDate);
 }

@@ -18,6 +18,8 @@ public class WeeklySummaryResponse {
   private Double capital1;
   private Double capital2;
   private Double capitalExt;
+  private Double fondoPrevisionUrbano;
+  private Double fondoPrevisionInterurbano;
   private Double ingresos;
   private Double egresos;
   private Double totalDia;

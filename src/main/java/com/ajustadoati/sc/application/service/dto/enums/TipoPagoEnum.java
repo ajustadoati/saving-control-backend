@@ -16,6 +16,8 @@ public enum TipoPagoEnum {
   PRESTAMO_COMPARTIR("Prestamo compartir", "PRESTAMOS"),
   INTERES_COMPARTIR("Interes Prestamo compartir", "INTERES_COMPARTIR"),
   SUMINISTROS("Suministros", "SUMINISTROS"),
+  FONDO_PREVISION_URBANO("Fondo de previsión urbano", "OTROS"),
+  FONDO_PREVISION_INTERURBANO("Fondo de previsión interurbano", "OTROS"),
   CAUCHOS("Cauchos", "CAUCHOS"),
   OTROS("Otros", "OTROS");
 

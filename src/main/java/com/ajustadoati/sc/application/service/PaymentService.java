@@ -17,7 +17,6 @@ import com.ajustadoati.sc.adapter.rest.repository.PagoRepository;
 import com.ajustadoati.sc.adapter.rest.repository.SavingRepository;
 import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
 import com.ajustadoati.sc.application.mapper.PagoMapper;
-import com.ajustadoati.sc.application.service.dto.DistributionInterestDto;
 import com.ajustadoati.sc.application.service.dto.PagoDto;
 import com.ajustadoati.sc.application.service.dto.enums.TipoPagoEnum;
 import com.ajustadoati.sc.application.service.enums.FundsType;
@@ -30,7 +29,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -56,8 +54,6 @@ public class PaymentService {
     private final AssociateService associateService;
     private final SupplyService supplyService;
     private final OtherPaymentService otherPaymentService;
-    private final UserAccountSummaryService userAccountSummaryService;
-    private final UserSavingsBoxService userSavingsBoxService;
     private final ContributionPaymentRepository contributionPaymentRepository;
     private final LoanPaymentRepository loanPaymentRepository;
     private final SupplyPaymentRepository supplyPaymentRepository;
@@ -133,7 +129,8 @@ public class PaymentService {
             case LOAN_PAYMENT_EXTERNAL -> processLoan(user, date, paymentDetail, pagoDtos);
             case LOAN_EXTERNAL -> processLoan(user, date, paymentDetail, pagoDtos);
             case LOAN_EXTERNAL_INTEREST -> processLoanInterest(user, date, paymentDetail, pagoDtos);
-            case WHEELS, OTHER_PAYMENTS -> processOthersPayment(user, paymentDetail, date, pagoDtos);
+            case WHEELS, OTHER_PAYMENTS, URBAN_FORECAST_FUND, INTERURBAN_FORECAST_FUND ->
+                processOthersPayment(user, paymentDetail, date, pagoDtos);
             default -> throw new IllegalArgumentException("Invalid payment type");
         }
     }
@@ -355,19 +352,22 @@ public class PaymentService {
     }
 
     private void processOthersPayment(User user, PaymentDetail paymentDetail, LocalDate date, List<PagoDto> pagos) {
-        if (paymentDetail.getPaymentType().equals(WHEELS)){
-            pagos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.CAUCHOS));
-        }
+        TipoPagoEnum tipoPago = switch (paymentDetail.getPaymentType()) {
+            case WHEELS -> TipoPagoEnum.CAUCHOS;
+            case OTHER_PAYMENTS -> TipoPagoEnum.OTROS;
+            case URBAN_FORECAST_FUND -> TipoPagoEnum.FONDO_PREVISION_URBANO;
+            case INTERURBAN_FORECAST_FUND -> TipoPagoEnum.FONDO_PREVISION_INTERURBANO;
+            default -> throw new IllegalStateException("Unexpected other payment type: " + paymentDetail.getPaymentType());
+        };
 
-        if (paymentDetail.getPaymentType().equals(OTHER_PAYMENTS)){
-            pagos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.OTROS));
-        }
-
+        pagos.add(buildPagoDto(user, date, paymentDetail, tipoPago));
 
         OtherPayment other = new OtherPayment();
         String reason = paymentDetail.getReason();
         if (reason == null || reason.trim().isEmpty()) {
-            reason = paymentDetail.getPaymentType().name();
+            reason = paymentDetail.getPaymentType() == OTHER_PAYMENTS
+                ? paymentDetail.getPaymentType().name()
+                : paymentDetail.getPaymentType().getDescription();
         }
         other.setName(reason);
         other.setUser(user);
@@ -456,13 +456,6 @@ public class PaymentService {
             montoTotal, null, distributionInterestService.getByDate(fecha));
     }
 
-    public List<DistributionInterestDto> calculateDistributionForDate(LocalDate date) {
-        BigDecimal interestAmount = pagoRepository.sumMontoByFechaAndTipoPago(date, TipoPagoEnum.ABONO_INTERES);
-        if (interestAmount == null || interestAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            return List.of();
-        }
-        return distribuirIntereses(interestAmount);
-    }
 
     public WeeklySummaryResponse getLatestWednesdaySummary() {
         var latestWednesday = pagoRepository.findLatestWednesdayWithPayments();
@@ -502,8 +495,11 @@ public class PaymentService {
         double capital1 = sumTypes(totals, EnumSet.of(TipoPagoEnum.ABONO_CAPITAL));
         double capital2 = sumTypes(totals, EnumSet.of(TipoPagoEnum.PRESTAMOS_2));
         double capitalExt = sumTypes(totals, EnumSet.of(TipoPagoEnum.PRESTAMO_EXTERNO));
+        double fondoPrevisionUrbano = sumTypes(totals, EnumSet.of(TipoPagoEnum.FONDO_PREVISION_URBANO));
+        double fondoPrevisionInterurbano = sumTypes(totals, EnumSet.of(TipoPagoEnum.FONDO_PREVISION_INTERURBANO));
 
-        double ingresos = ahorro + intereses1 + capital1 + capital2 + capitalExt;
+        double ingresos = ahorro + intereses1 + capital1 + capital2 + capitalExt
+            + fondoPrevisionUrbano + fondoPrevisionInterurbano;
         double egresos = Objects.requireNonNullElse(dailyReport.getTotalPrestamos(), 0.0);
         double totalDia = ingresos - egresos;
 
@@ -517,6 +513,8 @@ public class PaymentService {
             .capital1(capital1)
             .capital2(capital2)
             .capitalExt(capitalExt)
+            .fondoPrevisionUrbano(fondoPrevisionUrbano)
+            .fondoPrevisionInterurbano(fondoPrevisionInterurbano)
             .ingresos(ingresos)
             .egresos(egresos)
             .totalDia(totalDia)
@@ -561,100 +559,15 @@ public class PaymentService {
         double capital1 = sumTypes(totals, EnumSet.of(TipoPagoEnum.ABONO_CAPITAL));
         double capital2 = sumTypes(totals, EnumSet.of(TipoPagoEnum.PRESTAMOS_2));
         double capitalExt = sumTypes(totals, EnumSet.of(TipoPagoEnum.PRESTAMO_EXTERNO));
+        double fondoPrevisionUrbano = sumTypes(totals, EnumSet.of(TipoPagoEnum.FONDO_PREVISION_URBANO));
+        double fondoPrevisionInterurbano = sumTypes(totals, EnumSet.of(TipoPagoEnum.FONDO_PREVISION_INTERURBANO));
 
-        double ingresos = ahorro + intereses1 + capital1 + capital2 + capitalExt;
+        double ingresos = ahorro + intereses1 + capital1 + capital2 + capitalExt
+            + fondoPrevisionUrbano + fondoPrevisionInterurbano;
         double egresos = Objects.requireNonNullElse(dailyReport.getTotalPrestamos(), 0.0);
         return ingresos - egresos;
     }
 
-    public List<DistributionInterestDto> distribuirIntereses(BigDecimal montoTotal) {
-        List<UserSavingsBox> socios = userSavingsBoxService.findAll();
-
-        List<UserAssociate> asociados = userRepository.findAll()
-            .stream()
-            .filter(user -> CollectionUtils.isNotEmpty(user.getAssociates()))
-            .flatMap(user -> user.getAssociates().stream())
-            .toList();
-
-        Map<User, BigDecimal> balances = new LinkedHashMap<>();
-
-        socios.forEach(user -> {
-            BigDecimal balance = userAccountSummaryService.findByUserId(user.getUser().getUserId()).getCurrentBalance();
-            if(balance.doubleValue() > 0) {
-                balances.put(user.getUser(), balance);
-            }
-        });
-
-        asociados.forEach(user -> {
-            BigDecimal balance = userAccountSummaryService.findByUserId(user.getUserAssociate().getUserId()).getCurrentBalance();
-            if(balance.doubleValue() > 0) {
-                balances.put(user.getUserAssociate(), balance);
-            }
-        });
-
-
-        BigDecimal totalBalance = balances.values().stream()
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        Map<User, BigDecimal> rawDistributed = new LinkedHashMap<>();
-        for (Map.Entry<User, BigDecimal> entry : balances.entrySet()) {
-            BigDecimal balance = entry.getValue();
-            if (balance.compareTo(BigDecimal.ZERO) == 0 || totalBalance.compareTo(BigDecimal.ZERO) == 0) {
-                rawDistributed.put(entry.getKey(), BigDecimal.ZERO);
-            } else {
-                BigDecimal porcentaje = balance.divide(totalBalance, 10, RoundingMode.HALF_UP);
-                rawDistributed.put(entry.getKey(), montoTotal.multiply(porcentaje));
-            }
-        }
-
-        // Redondear a 2 decimales y calcular diferencia
-        Map<User, BigDecimal> finalAmounts = new LinkedHashMap<>();
-        BigDecimal totalDistributed = BigDecimal.ZERO;
-        for (Map.Entry<User, BigDecimal> entry : rawDistributed.entrySet()) {
-            BigDecimal rounded = entry.getValue().setScale(2, RoundingMode.HALF_UP);
-            finalAmounts.put(entry.getKey(), rounded);
-            totalDistributed = totalDistributed.add(rounded);
-        }
-
-        BigDecimal diferencia = montoTotal.subtract(totalDistributed);
-
-        // Compensar diferencia (±0.01)
-        if (diferencia.compareTo(BigDecimal.ZERO) != 0) {
-            List<Map.Entry<User, BigDecimal>> ordenado = rawDistributed.entrySet().stream()
-                .sorted((a, b) -> b.getValue().remainder(BigDecimal.ONE)
-                    .compareTo(a.getValue().remainder(BigDecimal.ONE)))
-                .toList();
-
-            for (Map.Entry<User, BigDecimal> entry : ordenado) {
-                if (diferencia.abs().compareTo(new BigDecimal("0.01")) < 0) break;
-
-                User user = entry.getKey();
-                BigDecimal actual = finalAmounts.get(user);
-                BigDecimal ajuste = diferencia.signum() > 0 ? new BigDecimal("0.01") : new BigDecimal("-0.01");
-                finalAmounts.put(user, actual.add(ajuste));
-                diferencia = diferencia.subtract(ajuste);
-            }
-        }
-
-        // Construir lista final
-        List<DistributionInterestDto> result = new ArrayList<>();
-        for (Map.Entry<User, BigDecimal> entry : finalAmounts.entrySet()) {
-            User user = entry.getKey();
-            result.add(DistributionInterestDto.builder()
-                .userId(user.getUserId())
-                .name(user.getFirstName() + " " + user.getLastName())
-                .totalBalance(balances.get(user).setScale(2, RoundingMode.HALF_UP))
-                    .interest(
-                            balances.get(user)
-                                    .multiply(BigDecimal.valueOf(100))
-                                    .divide(totalBalance, 2, RoundingMode.HALF_UP)
-                    )
-                .distributedAmount(entry.getValue())
-                .build());
-        }
-
-        return result;
-    }
 
     @Transactional
     public PaymentReversalResponse reversePayments(PaymentReversalRequest request) {

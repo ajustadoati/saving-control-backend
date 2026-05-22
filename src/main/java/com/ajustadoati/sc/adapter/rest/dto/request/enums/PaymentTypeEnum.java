@@ -15,6 +15,8 @@ public enum PaymentTypeEnum {
   LOAN_EXTERNAL_INTEREST("Interés de préstamo externo"),
   LOAN_PAYMENT_EXTERNAL("Abono a préstamo 2"),
   LOAN_EXTERNAL("Abono a préstamo externo"),
+  URBAN_FORECAST_FUND("Fondo de previsión urbano"),
+  INTERURBAN_FORECAST_FUND("Fondo de previsión interurbano"),
   OTHER_PAYMENTS("Otros"),
   WHEELS("Cauchos"),;
 
