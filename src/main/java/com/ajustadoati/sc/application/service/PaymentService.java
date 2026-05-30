@@ -41,6 +41,9 @@ import static com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum.
 @Slf4j
 public class PaymentService {
 
+    private static final String URBAN_FORECAST_FUND_NUMBER_ID = "1426590417";
+    private static final String INTERURBAN_FORECAST_FUND_NUMBER_ID = "1426590416";
+
     private final ContributionTypeRepository contributionTypeRepository;
     private final SavingRepository savingRepository;
     private final UserRepository userRepository;
@@ -60,6 +63,7 @@ public class PaymentService {
     private final OtherPaymentRepository otherPaymentRepository;
     private final BalanceHistoryService balanceHistoryService;
     private final DistributionInterestService distributionInterestService;
+    private final UserAccountSummaryService userAccountSummaryService;
 
     @Transactional
     public PaymentResponse processPayments(PaymentRequest request) {
@@ -129,7 +133,9 @@ public class PaymentService {
             case LOAN_PAYMENT_EXTERNAL -> processLoan(user, date, paymentDetail, pagoDtos);
             case LOAN_EXTERNAL -> processLoan(user, date, paymentDetail, pagoDtos);
             case LOAN_EXTERNAL_INTEREST -> processLoanInterest(user, date, paymentDetail, pagoDtos);
-            case WHEELS, OTHER_PAYMENTS, URBAN_FORECAST_FUND, INTERURBAN_FORECAST_FUND ->
+            case URBAN_FORECAST_FUND, INTERURBAN_FORECAST_FUND ->
+                processForecastFundPayment(user, date, paymentDetail, pagoDtos, savingRequests);
+            case WHEELS, OTHER_PAYMENTS ->
                 processOthersPayment(user, paymentDetail, date, pagoDtos);
             default -> throw new IllegalArgumentException("Invalid payment type");
         }
@@ -181,6 +187,24 @@ public class PaymentService {
                                  List<PagoDto> pagoDtos) {
         pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.SUMINISTROS));
         processSuppliesPayment(user.getUserId(), paymentDetail, date);
+    }
+
+    private void processForecastFundPayment(User user, LocalDate date, PaymentDetail paymentDetail,
+                                            List<PagoDto> pagoDtos,
+                                            List<SavingRequest> savingRequests) {
+        User targetUser = resolveForecastFundUser(paymentDetail.getPaymentType());
+        userAccountSummaryService.findByUserId(targetUser.getUserId());
+
+        TipoPagoEnum tipoPago = paymentDetail.getPaymentType() == PaymentTypeEnum.URBAN_FORECAST_FUND
+            ? TipoPagoEnum.FONDO_PREVISION_URBANO
+            : TipoPagoEnum.FONDO_PREVISION_INTERURBANO;
+
+        pagoDtos.add(buildPagoDto(user, date, paymentDetail, tipoPago));
+        savingRequests.add(SavingRequest.builder()
+            .associateId(targetUser.getUserId())
+            .savingDate(date)
+            .amount(paymentDetail.getAmount())
+            .build());
     }
 
     private void processLoanInterest(User user, LocalDate date, PaymentDetail paymentDetail,
@@ -355,8 +379,6 @@ public class PaymentService {
         TipoPagoEnum tipoPago = switch (paymentDetail.getPaymentType()) {
             case WHEELS -> TipoPagoEnum.CAUCHOS;
             case OTHER_PAYMENTS -> TipoPagoEnum.OTROS;
-            case URBAN_FORECAST_FUND -> TipoPagoEnum.FONDO_PREVISION_URBANO;
-            case INTERURBAN_FORECAST_FUND -> TipoPagoEnum.FONDO_PREVISION_INTERURBANO;
             default -> throw new IllegalStateException("Unexpected other payment type: " + paymentDetail.getPaymentType());
         };
 
@@ -374,6 +396,18 @@ public class PaymentService {
         other.setAmount(paymentDetail.getAmount());
         other.setPaymentDate(date);
         otherPaymentService.save(other);
+    }
+
+    private User resolveForecastFundUser(PaymentTypeEnum paymentType) {
+        String numberId = switch (paymentType) {
+            case URBAN_FORECAST_FUND -> URBAN_FORECAST_FUND_NUMBER_ID;
+            case INTERURBAN_FORECAST_FUND -> INTERURBAN_FORECAST_FUND_NUMBER_ID;
+            default -> throw new IllegalArgumentException("Payment type is not a forecast fund: " + paymentType);
+        };
+
+        return userRepository.findByNumberId(numberId)
+            .orElseThrow(() -> new IllegalArgumentException(
+                "Forecast fund account not found for numberId: " + numberId));
     }
 
     private ContributionPaymentRequest getContributionPaymentRequest(Integer userId,
