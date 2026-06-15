@@ -70,7 +70,7 @@ public class DistributionInterestService {
         distributionInterestRepository.save(entity);
 
         fundsService.saveFunds(distributionInterestDto.getDistributedAmount(), FundsType.ADD);
-        userAccountSummaryService.updateBalance(distributionInterestDto.getUserId(), distributionInterestDto.getDistributedAmount());
+        //userAccountSummaryService.updateBalance(distributionInterestDto.getUserId(), distributionInterestDto.getDistributedAmount());
         userAccountSummaryService.updateInterestBalance(distributionInterestDto.getUserId(), distributionInterestDto.getDistributedAmount());
 
         balanceHistoryService.save(new BalanceHistoryDto(0,
