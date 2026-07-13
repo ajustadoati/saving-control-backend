@@ -163,6 +163,55 @@ CREATE TABLE supply_payment (
     FOREIGN KEY (supply_id) REFERENCES supply(supply_id)
 );
 
+CREATE TABLE lubricant_product (
+    lubricant_product_id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(80) NOT NULL UNIQUE,
+    name VARCHAR(300) NOT NULL,
+    cost_price DECIMAL(12, 2) NOT NULL,
+    sale_price DECIMAL(12, 2) NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    active BIT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE lubricant_stock_movement (
+    lubricant_stock_movement_id INT AUTO_INCREMENT PRIMARY KEY,
+    lubricant_product_id INT NOT NULL,
+    movement_date DATE NOT NULL,
+    movement_type VARCHAR(20) NOT NULL,
+    quantity INT NOT NULL,
+    previous_stock INT NOT NULL,
+    new_stock INT NOT NULL,
+    notes VARCHAR(300),
+    FOREIGN KEY (lubricant_product_id) REFERENCES lubricant_product(lubricant_product_id)
+);
+
+CREATE TABLE lubricant_order (
+    lubricant_order_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    order_date DATE NOT NULL,
+    total_amount DECIMAL(12, 2) NOT NULL,
+    balance DECIMAL(12, 2) NOT NULL,
+    weekly_installment DECIMAL(12, 2) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    supply_id INT UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(user_id),
+    FOREIGN KEY (supply_id) REFERENCES supply(supply_id)
+);
+
+CREATE TABLE lubricant_order_item (
+    lubricant_order_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    lubricant_order_id INT NOT NULL,
+    lubricant_product_id INT NOT NULL,
+    product_code VARCHAR(80) NOT NULL,
+    product_name VARCHAR(300) NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(12, 2) NOT NULL,
+    line_total DECIMAL(12, 2) NOT NULL,
+    FOREIGN KEY (lubricant_order_id) REFERENCES lubricant_order(lubricant_order_id),
+    FOREIGN KEY (lubricant_product_id) REFERENCES lubricant_product(lubricant_product_id)
+);
+
 CREATE TABLE pago (
     id INT AUTO_INCREMENT PRIMARY KEY,
     fecha DATE NOT NULL,
@@ -212,6 +261,5 @@ INSERT INTO `user` (first_name,last_name,number_id,mobile_number,email,created_a
 
 INSERT INTO `role` (role_name) VALUES
 	 ('ADMIN');
-
 
 

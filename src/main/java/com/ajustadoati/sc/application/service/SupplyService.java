@@ -5,12 +5,14 @@ import com.ajustadoati.sc.adapter.rest.dto.request.SupplyRequest;
 import com.ajustadoati.sc.adapter.rest.dto.response.BalanceHistoryDto;
 import com.ajustadoati.sc.adapter.rest.dto.response.SupplyPaymentResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.SupplyResponse;
+import com.ajustadoati.sc.adapter.rest.repository.LubricantOrderRepository;
 import com.ajustadoati.sc.adapter.rest.repository.SupplyPaymentRepository;
 import com.ajustadoati.sc.adapter.rest.repository.SupplyRepository;
 import com.ajustadoati.sc.application.mapper.SupplyPaymentMapper;
 import com.ajustadoati.sc.domain.BalanceHistory;
 import com.ajustadoati.sc.domain.Supply;
 import com.ajustadoati.sc.domain.SupplyPayment;
+import com.ajustadoati.sc.domain.enums.LubricantOrderStatus;
 import com.ajustadoati.sc.domain.enums.TransactionType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,7 @@ public class SupplyService {
   private final UserService userService;
   private final BalanceHistoryService balanceHistoryService;
   private final SupplyPaymentMapper supplyPaymentMapper;
+  private final LubricantOrderRepository lubricantOrderRepository;
 
   public SupplyResponse createSupply(SupplyRequest request) {
 
@@ -69,6 +72,17 @@ public class SupplyService {
       TransactionType.SUPPLIES, request.getAmount(), "Payment supplies");
     balanceHistoryService.save(history);
     supplyRepository.save(supply);
+    lubricantOrderRepository.findBySupplyId(supply.getSupplyId()).ifPresent(order -> {
+      order.setBalance(supply.getSupplyBalance());
+      if (supply.getSupplyBalance().compareTo(java.math.BigDecimal.ZERO) == 0) {
+        order.setStatus(LubricantOrderStatus.PAID);
+      } else if (supply.getSupplyBalance().compareTo(order.getTotalAmount()) < 0) {
+        order.setStatus(LubricantOrderStatus.PARTIALLY_PAID);
+      } else {
+        order.setStatus(LubricantOrderStatus.PENDING);
+      }
+      lubricantOrderRepository.save(order);
+    });
   }
 
   public List<SupplyResponse> getSuppliesByUser(Integer userId) {
