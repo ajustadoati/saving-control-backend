@@ -192,6 +192,7 @@ CREATE TABLE lubricant_order (
     total_amount DECIMAL(12, 2) NOT NULL,
     balance DECIMAL(12, 2) NOT NULL,
     weekly_installment DECIMAL(12, 2) NOT NULL,
+    installment_count INT NOT NULL,
     status VARCHAR(20) NOT NULL,
     supply_id INT UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -261,5 +262,3 @@ INSERT INTO `user` (first_name,last_name,number_id,mobile_number,email,created_a
 
 INSERT INTO `role` (role_name) VALUES
 	 ('ADMIN');
-
-

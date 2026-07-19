@@ -32,6 +32,18 @@ public class LubricantController {
     return ResponseEntity.ok(lubricantService.createProduct(request));
   }
 
+  @PutMapping("/products/{productId}")
+  public ResponseEntity<LubricantProductResponse> updateProduct(@PathVariable Integer productId,
+                                                                @RequestBody LubricantProductRequest request) {
+    return ResponseEntity.ok(lubricantService.updateProduct(productId, request));
+  }
+
+  @DeleteMapping("/products/{productId}")
+  public ResponseEntity<Void> deleteProduct(@PathVariable Integer productId) {
+    lubricantService.deleteProduct(productId);
+    return ResponseEntity.noContent().build();
+  }
+
   @PostMapping("/products/{productId}/stock-entries")
   public ResponseEntity<LubricantProductResponse> addStock(@PathVariable Integer productId,
                                                            @RequestBody LubricantStockEntryRequest request) {

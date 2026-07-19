@@ -39,6 +39,9 @@ public class LubricantOrder {
   @Column(name = "weekly_installment", nullable = false, precision = 12, scale = 2)
   private BigDecimal weeklyInstallment;
 
+  @Column(name = "installment_count", nullable = false)
+  private Integer installmentCount;
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   private LubricantOrderStatus status;

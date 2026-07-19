@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -79,6 +80,50 @@ public class LubricantService {
 
   public List<LubricantProductResponse> getProducts() {
     return productRepository.findAll().stream()
+      .sorted(Comparator.comparing(LubricantProduct::getActive).reversed()
+        .thenComparing(LubricantProduct::getName, String.CASE_INSENSITIVE_ORDER))
+      .map(this::toProductResponse)
+      .toList();
+  }
+
+  @Transactional
+  public LubricantProductResponse updateProduct(Integer productId, LubricantProductRequest request) {
+    var product = getProduct(productId);
+
+    String code = requireText(request.getCode(), "Código requerido");
+    String name = requireText(request.getName(), "Nombre requerido");
+
+    productRepository.findByCodeIgnoreCase(code)
+      .filter(existing -> !existing.getLubricantProductId().equals(productId))
+      .ifPresent(existing -> {
+        throw new IllegalArgumentException("Ya existe un producto con el mismo código");
+      });
+
+    product.setCode(code);
+    product.setName(name);
+    product.setCostPrice(requirePositive(request.getCostPrice(), "Costo inválido"));
+    product.setSalePrice(requirePositive(request.getSalePrice(), "Precio de venta inválido"));
+
+    return toProductResponse(productRepository.save(product));
+  }
+
+  @Transactional
+  public void deleteProduct(Integer productId) {
+    var product = getProduct(productId);
+    product.setActive(Boolean.FALSE);
+    productRepository.save(product);
+  }
+
+  @Transactional
+  public LubricantProductResponse restoreProduct(Integer productId) {
+    var product = getProduct(productId);
+    product.setActive(Boolean.TRUE);
+    return toProductResponse(productRepository.save(product));
+  }
+
+  public List<LubricantProductResponse> getActiveProducts() {
+    return productRepository.findAll().stream()
+      .filter(product -> Boolean.TRUE.equals(product.getActive()))
       .sorted(Comparator.comparing(LubricantProduct::getName, String.CASE_INSENSITIVE_ORDER))
       .map(this::toProductResponse)
       .toList();
@@ -131,12 +176,13 @@ public class LubricantService {
     }
 
     var user = userService.getUserById(request.getUserId());
-    BigDecimal totalAmount = BigDecimal.ZERO;
+    LocalDate orderDate = request.getOrderDate() != null ? request.getOrderDate() : LocalDate.now();
 
     var order = LubricantOrder.builder()
       .user(user)
-      .orderDate(request.getOrderDate() != null ? request.getOrderDate() : LocalDate.now())
-      .weeklyInstallment(requirePositive(request.getWeeklyInstallment(), "La cuota semanal es requerida"))
+      .orderDate(orderDate)
+      .weeklyInstallment(BigDecimal.ZERO)
+      .installmentCount(request.getInstallmentCount() != null && request.getInstallmentCount() > 0 ? request.getInstallmentCount() : 4)
       .totalAmount(BigDecimal.ZERO)
       .balance(BigDecimal.ZERO)
       .status(LubricantOrderStatus.PENDING)
@@ -149,15 +195,23 @@ public class LubricantService {
       .map(itemRequest -> buildOrderItem(persistedOrder, itemRequest))
       .toList());
 
-    for (LubricantOrderItem item : items) {
-      totalAmount = totalAmount.add(item.getLineTotal());
-      moveStockOut(item.getProduct(), item.getQuantity(), persistedOrder.getOrderDate(),
-        "Pedido lubricantes #" + persistedOrder.getLubricantOrderId());
-    }
+    BigDecimal totalAmount = items.stream()
+      .map(LubricantOrderItem::getLineTotal)
+      .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    Integer installmentCount = resolveInstallmentCount(request, totalAmount);
+    BigDecimal weeklyInstallment = resolveWeeklyInstallment(request, totalAmount, installmentCount);
 
     persistedOrder.setItems(items);
     persistedOrder.setTotalAmount(totalAmount);
     persistedOrder.setBalance(totalAmount);
+    persistedOrder.setInstallmentCount(installmentCount);
+    persistedOrder.setWeeklyInstallment(weeklyInstallment);
+
+    for (LubricantOrderItem item : items) {
+      moveStockOut(item.getProduct(), item.getQuantity(), persistedOrder.getOrderDate(),
+        "Pedido lubricantes #" + persistedOrder.getLubricantOrderId());
+    }
 
     SupplyRequest supplyRequest = new SupplyRequest();
     supplyRequest.setUserId(user.getUserId());
@@ -201,6 +255,10 @@ public class LubricantService {
     }
 
     var product = getProduct(request.getProductId());
+    if (!Boolean.TRUE.equals(product.getActive())) {
+      throw new IllegalArgumentException("El producto no está activo para nuevos pedidos");
+    }
+
     BigDecimal unitPrice = request.getUnitPrice() != null && request.getUnitPrice().compareTo(BigDecimal.ZERO) > 0
       ? request.getUnitPrice()
       : product.getSalePrice();
@@ -264,6 +322,7 @@ public class LubricantService {
       .totalAmount(order.getTotalAmount())
       .balance(order.getBalance())
       .weeklyInstallment(order.getWeeklyInstallment())
+      .installmentCount(order.getInstallmentCount())
       .status(order.getStatus())
       .supplyId(order.getSupplyId())
       .items(order.getItems() == null ? List.of() : order.getItems().stream()
@@ -291,5 +350,29 @@ public class LubricantService {
       throw new IllegalArgumentException(message);
     }
     return value;
+  }
+
+  private Integer resolveInstallmentCount(LubricantOrderRequest request, BigDecimal totalAmount) {
+    if (request.getInstallmentCount() != null && request.getInstallmentCount() > 0) {
+      return request.getInstallmentCount();
+    }
+
+    if (request.getWeeklyInstallment() != null && request.getWeeklyInstallment().compareTo(BigDecimal.ZERO) > 0) {
+      return totalAmount.divide(request.getWeeklyInstallment(), 0, RoundingMode.UP).intValue();
+    }
+
+    return 4;
+  }
+
+  private BigDecimal resolveWeeklyInstallment(LubricantOrderRequest request, BigDecimal totalAmount, Integer installmentCount) {
+    if (request.getInstallmentCount() != null && request.getInstallmentCount() > 0) {
+      return totalAmount.divide(BigDecimal.valueOf(installmentCount), 2, RoundingMode.HALF_UP);
+    }
+
+    if (request.getWeeklyInstallment() != null && request.getWeeklyInstallment().compareTo(BigDecimal.ZERO) > 0) {
+      return request.getWeeklyInstallment().setScale(2, RoundingMode.HALF_UP);
+    }
+
+    return totalAmount.divide(BigDecimal.valueOf(installmentCount), 2, RoundingMode.HALF_UP);
   }
 }

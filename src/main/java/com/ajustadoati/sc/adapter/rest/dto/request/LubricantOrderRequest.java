@@ -11,5 +11,6 @@ public class LubricantOrderRequest {
   private Integer userId;
   private LocalDate orderDate;
   private BigDecimal weeklyInstallment;
+  private Integer installmentCount;
   private List<LubricantOrderItemRequest> items;
 }

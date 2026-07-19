@@ -19,6 +19,7 @@ public class LubricantOrderResponse {
   private BigDecimal totalAmount;
   private BigDecimal balance;
   private BigDecimal weeklyInstallment;
+  private Integer installmentCount;
   private LubricantOrderStatus status;
   private Integer supplyId;
   private List<LubricantOrderItemResponse> items;
