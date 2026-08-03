@@ -144,43 +144,19 @@ public class PaymentService {
     private void processContribution(User user, LocalDate date, PaymentDetail paymentDetail,
                                      List<PagoDto> pagoDtos,
                                      List<ContributionPaymentRequest> contributionPaymentRequests) {
-        contributionPaymentRequests.add(
-            getContributionPaymentRequest(user.getUserId(), paymentDetail, date));
-        if (paymentDetail.getPaymentType() == PaymentTypeEnum.ADMINISTRATIVE) {
-            paymentDetail.setReferenceId(5);
-        } else {
-            paymentDetail.setReferenceId(6);
-        }
-        TipoPagoEnum tipoPago =
-            paymentDetail.getPaymentType() == PaymentTypeEnum.ADMINISTRATIVE ? TipoPagoEnum.ADMINISTRATIVO
-                : TipoPagoEnum.COMPARTIR;
-        pagoDtos.add(buildPagoDto(user, date, paymentDetail, tipoPago));
+        contributionPaymentRequests.add(getContributionPaymentRequest(user.getUserId(), paymentDetail, date));
+        TipoPagoEnum tipoPago = resolveContributionTipoPago(paymentDetail.getPaymentType());
+
+        pagoDtos.add(buildPagoDto(user, date, paymentDetail.getAmount(), tipoPago));
     }
 
     private void processSaving(User user, LocalDate date, PaymentDetail paymentDetail,
                                List<PagoDto> pagoDtos,
                                List<SavingRequest> savingRequests) {
-        var associates = associateService.getAssociatesByUserId(user.getUserId());
-
-        if (paymentDetail.getPaymentType() == PaymentTypeEnum.PARTNER_SAVING) {
-            log.info("Creating saving request for partner");
-            var associateId = associates.stream()
-                .filter(associateDto -> Util.PARTNERS.contains(associateDto.getRelationship()))
-                .map(AssociateDto::getId)
-                .findFirst();
-            associateId.ifPresent(paymentDetail::setUserId);
-
-        } else if (paymentDetail.getPaymentType() == PaymentTypeEnum.CHILDRENS_SAVING) {
-            log.info("Creating saving request for children");
-            var associateId = associates.stream()
-                .filter(associateDto -> Util.CHILDREN.contains(associateDto.getRelationship()))
-                .map(AssociateDto::getId)
-                .findFirst();
-            associateId.ifPresent(paymentDetail::setUserId);
-        }
-        savingRequests.add(getSavingRequest(user.getUserId(), paymentDetail, date));
+        Integer targetAssociateId = resolveSavingAssociateId(user.getUserId(), paymentDetail);
+        savingRequests.add(getSavingRequest(paymentDetail.getAmount(), date, targetAssociateId));
         log.info("saving dto");
-        pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.AHORRO));
+        pagoDtos.add(buildPagoDto(user, date, paymentDetail.getAmount(), TipoPagoEnum.AHORRO));
     }
 
     private void processSupplies(User user, LocalDate date, PaymentDetail paymentDetail,
@@ -244,10 +220,14 @@ public class PaymentService {
 
     private PagoDto buildPagoDto(User user, LocalDate date, PaymentDetail paymentDetail,
                                  TipoPagoEnum tipoPago) {
+        return buildPagoDto(user, date, paymentDetail.getAmount(), tipoPago);
+    }
+
+    private PagoDto buildPagoDto(User user, LocalDate date, BigDecimal amount,
+                                 TipoPagoEnum tipoPago) {
         return PagoDto.builder()
             .tipoPago(tipoPago)
-            .monto(paymentDetail.getAmount()
-                .doubleValue())
+            .monto(amount.doubleValue())
             .fecha(date.toString())
             .cedula(user.getNumberId())
             .build();
@@ -360,19 +340,25 @@ public class PaymentService {
     }
 
     private void processSuppliesPayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
+        if (paymentDetail.getReferenceId() == null) {
+            throw new IllegalArgumentException("Supply reference is required");
+        }
+
         var supplies = supplyService.getSuppliesByUser(userId);
         var supply = supplies.stream()
             .filter(supplyResponse -> Objects.equals(
                 supplyResponse.getSupplyId(), paymentDetail.getReferenceId()))
             .findFirst();
-        if (supply.isPresent()) {
-            var request = new SupplyPaymentRequest();
-            request.setPaymentDate(date);
-            request.setSupplyId(supply.get()
-                .getSupplyId());
-            request.setAmount(paymentDetail.getAmount());
-            supplyService.registerPayment(request);
+        if (supply.isEmpty()) {
+            throw new IllegalArgumentException("Active supply not found for payment");
         }
+
+        var request = new SupplyPaymentRequest();
+        request.setPaymentDate(date);
+        request.setSupplyId(supply.get()
+            .getSupplyId());
+        request.setAmount(paymentDetail.getAmount());
+        supplyService.registerPayment(request);
     }
 
     private void processOthersPayment(User user, PaymentDetail paymentDetail, LocalDate date, List<PagoDto> pagos) {
@@ -422,17 +408,52 @@ public class PaymentService {
 
     }
 
-    private SavingRequest getSavingRequest(Integer userId, PaymentDetail paymentDetail,
-                                           LocalDate date) {
+    private SavingRequest getSavingRequest(BigDecimal amount, LocalDate date, Integer associateId) {
         var saving = new SavingRequest();
-        if (Objects.nonNull(paymentDetail.getUserId())) {
-            saving.setAssociateId(paymentDetail.getUserId());
+        if (Objects.nonNull(associateId)) {
+            saving.setAssociateId(associateId);
         }
 
-        saving.setAmount(paymentDetail.getAmount());
+        saving.setAmount(amount);
         saving.setSavingDate(date);
 
         return saving;
+    }
+
+    private TipoPagoEnum resolveContributionTipoPago(PaymentTypeEnum paymentType) {
+        return switch (paymentType) {
+            case ADMINISTRATIVE -> TipoPagoEnum.ADMINISTRATIVO;
+            case SHARED_CONTRIBUTION -> TipoPagoEnum.COMPARTIR;
+            default -> throw new IllegalArgumentException("Contribution payment type not supported: " + paymentType);
+        };
+    }
+
+    private Integer resolveSavingAssociateId(Integer userId, PaymentDetail paymentDetail) {
+        if (Objects.nonNull(paymentDetail.getUserId())) {
+            return paymentDetail.getUserId();
+        }
+        if (paymentDetail.getPaymentType() == PaymentTypeEnum.SAVING) {
+            return null;
+        }
+
+        var associates = associateService.getAssociatesByUserId(userId);
+        if (paymentDetail.getPaymentType() == PaymentTypeEnum.PARTNER_SAVING) {
+            log.info("Creating saving request for partner");
+            return associates.stream()
+                .filter(associateDto -> Util.PARTNERS.contains(associateDto.getRelationship()))
+                .map(AssociateDto::getId)
+                .findFirst()
+                .orElse(null);
+        }
+        if (paymentDetail.getPaymentType() == PaymentTypeEnum.CHILDRENS_SAVING) {
+            log.info("Creating saving request for children");
+            return associates.stream()
+                .filter(associateDto -> Util.CHILDREN.contains(associateDto.getRelationship()))
+                .map(AssociateDto::getId)
+                .findFirst()
+                .orElse(null);
+        }
+        return null;
     }
 
     public DailyResponse generateDailyReport(LocalDate fecha) {
