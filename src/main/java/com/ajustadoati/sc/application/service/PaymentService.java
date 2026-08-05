@@ -340,15 +340,16 @@ public class PaymentService {
     }
 
     private void processSuppliesPayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
-        if (paymentDetail.getReferenceId() == null) {
-            throw new IllegalArgumentException("Supply reference is required");
-        }
-
         var supplies = supplyService.getSuppliesByUser(userId);
-        var supply = supplies.stream()
-            .filter(supplyResponse -> Objects.equals(
-                supplyResponse.getSupplyId(), paymentDetail.getReferenceId()))
-            .findFirst();
+        var supply = paymentDetail.getReferenceId() != null
+            ? supplies.stream()
+                .filter(supplyResponse -> Objects.equals(
+                    supplyResponse.getSupplyId(), paymentDetail.getReferenceId()))
+                .findFirst()
+            : supplies.stream()
+                .filter(supplyResponse -> supplyResponse.getSupplyBalance() != null
+                    && supplyResponse.getSupplyBalance().compareTo(BigDecimal.ZERO) > 0)
+                .findFirst();
         if (supply.isEmpty()) {
             throw new IllegalArgumentException("Active supply not found for payment");
         }
