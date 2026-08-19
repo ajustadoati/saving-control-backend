@@ -41,6 +41,33 @@ public class UserAccountSummaryService {
     return repository.save(userAccount);
   }
 
+  public UserAccountSummary saveOrUpdateInitialSetup(SummaryDto summary, LocalDate effectiveDate) {
+    var currentSummary = repository.findByUser_UserId(summary.userId());
+    if (currentSummary.isEmpty()) {
+      return repository.save(UserAccountSummary.builder()
+        .user(User.builder().userId(summary.userId()).build())
+        .initialBalance(summary.initialBalance())
+        .currentBalance(summary.initialBalance())
+        .interestEarned(summary.interestEarned())
+        .lastUpdated(effectiveDate)
+        .build());
+    }
+
+    var existing = currentSummary.get();
+    boolean canReconfigure = existing.getCurrentBalance().compareTo(existing.getInitialBalance()) == 0
+      && existing.getInterestEarned().compareTo(BigDecimal.ZERO) == 0;
+
+    if (!canReconfigure) {
+      throw new BalanceAlreadyExistException("User already has financial movements; initial setup cannot be changed");
+    }
+
+    existing.setInitialBalance(summary.initialBalance());
+    existing.setCurrentBalance(summary.initialBalance());
+    existing.setInterestEarned(summary.interestEarned());
+    existing.setLastUpdated(effectiveDate);
+    return repository.save(existing);
+  }
+
   public UserAccountSummary findByUserId(Integer userId) {
     return repository.findByUser_UserId(userId)
       .orElseThrow(() -> new EntityNotFoundException("User has not balance "+ userId));

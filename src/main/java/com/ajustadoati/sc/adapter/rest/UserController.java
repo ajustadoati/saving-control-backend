@@ -2,8 +2,11 @@ package com.ajustadoati.sc.adapter.rest;
 
 import com.ajustadoati.sc.adapter.rest.assemblers.UserModelAssembler;
 import com.ajustadoati.sc.adapter.rest.dto.request.AssociateRequest;
+import com.ajustadoati.sc.adapter.rest.dto.request.SavingsOnboardingRequest;
+import com.ajustadoati.sc.adapter.rest.dto.response.SavingsOnboardingResponse;
 import com.ajustadoati.sc.adapter.rest.dto.response.UserDto;
 import com.ajustadoati.sc.adapter.rest.dto.request.CreateUserRequest;
+import com.ajustadoati.sc.application.service.SavingsOnboardingService;
 import com.ajustadoati.sc.application.service.UserService;
 import com.ajustadoati.sc.domain.User;
 import org.springframework.data.domain.Pageable;
@@ -39,11 +42,15 @@ public class UserController {
 
   private final PagedResourcesAssembler<UserDto> pagedResourcesAssembler;
 
+  private final SavingsOnboardingService savingsOnboardingService;
+
   public UserController(UserService userService, UserModelAssembler userModelAssembler,
-      PagedResourcesAssembler<UserDto> pagedResourcesAssembler) {
+      PagedResourcesAssembler<UserDto> pagedResourcesAssembler,
+      SavingsOnboardingService savingsOnboardingService) {
     this.userService = userService;
     this.userModelAssembler = userModelAssembler;
     this.pagedResourcesAssembler = pagedResourcesAssembler;
+    this.savingsOnboardingService = savingsOnboardingService;
   }
 
   @PostMapping
@@ -109,6 +116,13 @@ public class UserController {
   public void deleteUser(
     @PathVariable Integer id) {
     userService.delete(id);
+  }
+
+  @PostMapping("/{id}/savings-onboarding")
+  public ResponseEntity<SavingsOnboardingResponse> saveSavingsOnboarding(
+    @PathVariable Integer id,
+    @RequestBody @Validated SavingsOnboardingRequest request) {
+    return ResponseEntity.ok(savingsOnboardingService.save(id, request));
   }
 
 }

@@ -40,6 +40,20 @@ public class UserSavingsBoxService {
     return Optional.of(repository.save(boxData)).map(userSavingsBoxMapper::toDto).orElseThrow();
   }
 
+  public UserSavingsBoxDto saveOrUpdateInitialSetup(Integer userId, Integer boxCount,
+                                                    java.math.BigDecimal boxValue, LocalDate effectiveDate) {
+    User user = userService.getUserById(userId);
+    var existing = repository.findTopByUser_UserIdOrderByUpdatedAtDesc(userId);
+
+    UserSavingsBox boxData = existing.orElseGet(UserSavingsBox::new);
+    boxData.setUser(user);
+    boxData.setBoxCount(boxCount);
+    boxData.setBoxValue(boxValue);
+    boxData.setUpdatedAt(effectiveDate);
+
+    return Optional.of(repository.save(boxData)).map(userSavingsBoxMapper::toDto).orElseThrow();
+  }
+
 
   public List<UserSavingsBoxDto> getAllUserSavingsBox(Integer userId) {
 
