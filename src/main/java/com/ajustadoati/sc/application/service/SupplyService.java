@@ -17,7 +17,9 @@ import com.ajustadoati.sc.domain.enums.TransactionType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -83,6 +85,33 @@ public class SupplyService {
       }
       lubricantOrderRepository.save(order);
     });
+  }
+
+  @Transactional
+  public void reversePayments(List<SupplyPayment> supplyPayments) {
+    if (supplyPayments == null || supplyPayments.isEmpty()) {
+      return;
+    }
+
+    for (var payment : supplyPayments) {
+      var supply = payment.getSupply();
+      supply.setSupplyBalance(supply.getSupplyBalance().add(payment.getAmount()));
+      supplyRepository.save(supply);
+
+      lubricantOrderRepository.findBySupplyId(supply.getSupplyId()).ifPresent(order -> {
+        order.setBalance(supply.getSupplyBalance());
+        if (supply.getSupplyBalance().compareTo(BigDecimal.ZERO) == 0) {
+          order.setStatus(LubricantOrderStatus.PAID);
+        } else if (supply.getSupplyBalance().compareTo(order.getTotalAmount()) < 0) {
+          order.setStatus(LubricantOrderStatus.PARTIALLY_PAID);
+        } else {
+          order.setStatus(LubricantOrderStatus.PENDING);
+        }
+        lubricantOrderRepository.save(order);
+      });
+    }
+
+    supplyPaymentRepository.deleteAll(supplyPayments);
   }
 
   public List<SupplyResponse> getSuppliesByUser(Integer userId) {

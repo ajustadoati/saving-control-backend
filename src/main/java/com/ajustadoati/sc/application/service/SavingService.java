@@ -98,6 +98,20 @@ public class SavingService {
     return savedSavings;
   }
 
+  @Transactional
+  public void reverseSavingSet(List<Saving> savings) {
+    if (savings == null || savings.isEmpty()) {
+      return;
+    }
+
+    savings.forEach(saving -> {
+      userAccountSummaryService.updateBalance(saving.getUser().getUserId(), saving.getAmount().negate());
+      fundsService.saveFunds(saving.getAmount(), FundsType.SUBTRACT);
+    });
+
+    savingRepository.deleteAll(savings);
+  }
+
   public Page<Saving> getAllByUserId(Integer userId, Pageable pageable) {
     var user = userRepository
         .findById(userId)

@@ -661,9 +661,9 @@ public class PaymentService {
                 fundsService.saveFunds(amount, FundsType.SUBTRACT);
             }
         }
-        
+
         // 3. Eliminar registros relacionados
-        deleteRelatedPaymentRecords(user, request.date());
+        deleteRelatedPaymentRecords(user, request.date(), pagosToReverse);
         
         // 4. Eliminar registros de pago principales
         pagoRepository.deleteAll(pagosToReverse);
@@ -683,42 +683,82 @@ public class PaymentService {
         );
     }
     
-    private void deleteRelatedPaymentRecords(User user, LocalDate date) {
+    private void deleteRelatedPaymentRecords(User user, LocalDate date, List<Pago> pagosToReverse) {
         log.info("Deleting related payment records for userId: {}, date: {}", user.getUserId(), date);
-        
-        // Eliminar ahorros
-        var savings = savingRepository.findByUserAndSavingDate(user, date);
-        if (!savings.isEmpty()) {
-            savingRepository.deleteAll(savings);
-            log.info("Deleted {} saving records", savings.size());
-        }
-        
+
+        reverseSavings(user, date, pagosToReverse);
+
         // Eliminar pagos de contribuciones
         var contributionPayments = contributionPaymentRepository.findByUserAndPaymentDate(user, date);
         if (!contributionPayments.isEmpty()) {
             contributionPaymentRepository.deleteAll(contributionPayments);
             log.info("Deleted {} contribution payment records", contributionPayments.size());
         }
-        
-        // Eliminar pagos de préstamos
-        var loanPayments = loanPaymentRepository.findByUserAndPaymentDate(user, date);
-        if (!loanPayments.isEmpty()) {
-            loanPaymentRepository.deleteAll(loanPayments);
-            log.info("Deleted {} loan payment records", loanPayments.size());
-        }
-        
-        // Eliminar pagos de suministros
-        var supplyPayments = supplyPaymentRepository.findByUserAndPaymentDate(user, date);
-        if (!supplyPayments.isEmpty()) {
-            supplyPaymentRepository.deleteAll(supplyPayments);
-            log.info("Deleted {} supply payment records", supplyPayments.size());
-        }
-        
+
+        reverseLoanPayments(user, date);
+        reverseSupplyPayments(user, date);
+
         // Eliminar otros pagos
         var otherPayments = otherPaymentRepository.findByUserAndPaymentDate(user, date);
         if (!otherPayments.isEmpty()) {
             otherPaymentRepository.deleteAll(otherPayments);
             log.info("Deleted {} other payment records", otherPayments.size());
+        }
+    }
+
+    private void reverseSavings(User user, LocalDate date, List<Pago> pagosToReverse) {
+        var savingsToReverse = new ArrayList<>(savingRepository.findByUserAndSavingDate(user, date));
+
+        var associates = associateService.getAssociatesByUserId(user.getUserId());
+        associates.stream()
+            .filter(associate -> Util.PARTNERS.contains(associate.getRelationship())
+                || Util.CHILDREN.contains(associate.getRelationship()))
+            .map(AssociateDto::getId)
+            .map(this::getUser)
+            .forEach(associateUser ->
+                savingsToReverse.addAll(savingRepository.findByUserAndSavingDate(associateUser, date)));
+
+        pagosToReverse.stream()
+            .filter(pago -> pago.getTipoPago() == TipoPagoEnum.FONDO_PREVISION_URBANO
+                || pago.getTipoPago() == TipoPagoEnum.FONDO_PREVISION_INTERURBANO)
+            .forEach(pago -> findForecastFundSaving(pago, date)
+                .ifPresent(savingsToReverse::add));
+
+        if (!savingsToReverse.isEmpty()) {
+            savingService.reverseSavingSet(savingsToReverse.stream().distinct().toList());
+            log.info("Deleted {} saving records", savingsToReverse.size());
+        }
+    }
+
+    private Optional<Saving> findForecastFundSaving(Pago pago, LocalDate date) {
+        var forecastFundUser = switch (pago.getTipoPago()) {
+            case FONDO_PREVISION_URBANO -> resolveForecastFundUser(PaymentTypeEnum.URBAN_FORECAST_FUND);
+            case FONDO_PREVISION_INTERURBANO -> resolveForecastFundUser(PaymentTypeEnum.INTERURBAN_FORECAST_FUND);
+            default -> null;
+        };
+
+        if (forecastFundUser == null) {
+            return Optional.empty();
+        }
+
+        return savingRepository.findByUserAndSavingDate(forecastFundUser, date).stream()
+            .filter(saving -> saving.getAmount() != null && saving.getAmount().compareTo(pago.getMonto()) == 0)
+            .findFirst();
+    }
+
+    private void reverseLoanPayments(User user, LocalDate date) {
+        var loanPayments = loanPaymentRepository.findByUserAndPaymentDate(user, date);
+        if (!loanPayments.isEmpty()) {
+            loanService.reversePayments(loanPayments);
+            log.info("Deleted {} loan payment records", loanPayments.size());
+        }
+    }
+
+    private void reverseSupplyPayments(User user, LocalDate date) {
+        var supplyPayments = supplyPaymentRepository.findByUserAndPaymentDate(user, date);
+        if (!supplyPayments.isEmpty()) {
+            supplyService.reversePayments(supplyPayments);
+            log.info("Deleted {} supply payment records", supplyPayments.size());
         }
     }
     

@@ -17,6 +17,7 @@ import com.ajustadoati.sc.domain.enums.TransactionType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -104,6 +105,30 @@ public class LoanService {
           fundsService.saveFunds(request.getAmount(), FundsType.ADD);
       }
 
+  }
+
+  @Transactional
+  public void reversePayments(List<LoanPayment> loanPayments) {
+    if (loanPayments == null || loanPayments.isEmpty()) {
+      return;
+    }
+
+    for (var payment : loanPayments) {
+      var loan = payment.getLoan();
+
+      if (payment.getPaymentType().getLoanPaymentTypeId() == 1) {
+        loan.setLoanBalance(loan.getLoanBalance().add(payment.getAmount()));
+        loanRepository.save(loan);
+      }
+
+      if (loan.getLoanType().getLoanTypeId() == 4) {
+        sharingFundsService.saveFunds(payment.getAmount(), FundsType.SUBTRACT);
+      } else {
+        fundsService.saveFunds(payment.getAmount(), FundsType.SUBTRACT);
+      }
+    }
+
+    loanPaymentRepository.deleteAll(loanPayments);
   }
 
   public List<LoanResponse> getLoansByUser(Integer userId) {
