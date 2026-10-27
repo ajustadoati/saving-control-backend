@@ -56,6 +56,7 @@ public class PaymentService {
     private final FundsService fundsService;
     private final AssociateService associateService;
     private final SupplyService supplyService;
+    private final LubricantOrderRepository lubricantOrderRepository;
     private final OtherPaymentService otherPaymentService;
     private final ContributionPaymentRepository contributionPaymentRepository;
     private final LoanPaymentRepository loanPaymentRepository;
@@ -161,8 +162,27 @@ public class PaymentService {
 
     private void processSupplies(User user, LocalDate date, PaymentDetail paymentDetail,
                                  List<PagoDto> pagoDtos) {
+        if (paymentDetail.getAmount() == null || paymentDetail.getAmount().compareTo(BigDecimal.ZERO) <= 0
+            || paymentDetail.getAmount().stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException("El abono debe ser positivo y tener hasta dos decimales");
+        }
+        if (paymentDetail.getReferenceId() != null) {
+            processSuppliesPayment(user.getUserId(), paymentDetail, date);
+        } else {
+            // Legacy unlinked defaults remain cash payments; never assign them to a new order.
+            var legacySupply = supplyService.getSuppliesByUser(user.getUserId()).stream()
+                .filter(supply -> supply.getSupplyBalance() != null
+                    && supply.getSupplyBalance().compareTo(BigDecimal.ZERO) > 0)
+                .filter(supply -> lubricantOrderRepository.findBySupplyId(supply.getSupplyId()).isEmpty())
+                .findFirst();
+            if (legacySupply.isPresent()) {
+                var legacyPayment = new PaymentDetail();
+                legacyPayment.setReferenceId(legacySupply.get().getSupplyId());
+                legacyPayment.setAmount(paymentDetail.getAmount());
+                processSuppliesPayment(user.getUserId(), legacyPayment, date);
+            }
+        }
         pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.SUMINISTROS));
-        processSuppliesPayment(user.getUserId(), paymentDetail, date);
     }
 
     private void processForecastFundPayment(User user, LocalDate date, PaymentDetail paymentDetail,

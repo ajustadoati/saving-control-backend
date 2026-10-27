@@ -49,8 +49,13 @@ public class SupplyService {
     return mapToResponse(supply);
   }
 
+  @Transactional(noRollbackFor = IllegalArgumentException.class)
   public void registerPayment(SupplyPaymentRequest request) {
-    var supply = supplyRepository.findById(request.getSupplyId())
+    if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0
+        || request.getAmount().stripTrailingZeros().scale() > 2 || request.getPaymentDate() == null) {
+      throw new IllegalArgumentException("Indica fecha y monto positivo con hasta dos decimales");
+    }
+    var supply = supplyRepository.findForPaymentById(request.getSupplyId())
       .orElseThrow(() -> new IllegalArgumentException("Invalid Supply"));
 
     if (request.getAmount().compareTo(supply.getSupplyBalance()) > 0) {
@@ -62,15 +67,10 @@ public class SupplyService {
     payment.setPaymentDate(request.getPaymentDate());
     payment.setAmount(request.getAmount());
 
-    var currentBalance = supply.getSupplyBalance();
-    if (currentBalance.subtract(request.getAmount()).intValue() < 0) {
-      log.info("Balance is less than payment amount, it will be set to 0");
-      request.setAmount(supply.getSupplyBalance());
-    }
     supply.setSupplyBalance(supply.getSupplyBalance().subtract(request.getAmount()));
 
     supplyPaymentRepository.save(payment);
-    var history = new BalanceHistoryDto(0, supply.getUser().getUserId(), LocalDate.now(),
+    var history = new BalanceHistoryDto(0, supply.getUser().getUserId(), request.getPaymentDate(),
       TransactionType.SUPPLIES, request.getAmount(), "Payment supplies");
     balanceHistoryService.save(history);
     supplyRepository.save(supply);
