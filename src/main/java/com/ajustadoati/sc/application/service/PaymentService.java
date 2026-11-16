@@ -6,7 +6,6 @@ import com.ajustadoati.sc.adapter.rest.dto.request.PaymentDetail;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.PaymentReversalRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.SavingRequest;
-import com.ajustadoati.sc.adapter.rest.dto.request.SupplyPaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum;
 import com.ajustadoati.sc.adapter.rest.dto.response.*;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse.PaymentStatus;
@@ -56,11 +55,10 @@ public class PaymentService {
     private final FundsService fundsService;
     private final AssociateService associateService;
     private final SupplyService supplyService;
-    private final LubricantOrderRepository lubricantOrderRepository;
+    private final DefaultPaymentRepository defaultPaymentRepository;
     private final OtherPaymentService otherPaymentService;
     private final ContributionPaymentRepository contributionPaymentRepository;
     private final LoanPaymentRepository loanPaymentRepository;
-    private final SupplyPaymentRepository supplyPaymentRepository;
     private final OtherPaymentRepository otherPaymentRepository;
     private final BalanceHistoryService balanceHistoryService;
     private final DistributionInterestService distributionInterestService;
@@ -68,7 +66,15 @@ public class PaymentService {
 
     @Transactional
     public PaymentResponse processPayments(PaymentRequest request) {
-        var user = getUser(request.getUserId());
+        var user = lockUserForMultipayment(request.getUserId());
+        if (defaultPaymentRepository.countLegacySupplyDefaults(user) > 0) {
+            throw new IllegalArgumentException("Retira el suministro por defecto en Gestion de Socio antes de registrar el pago");
+        }
+        var supplyLines = request.getPayments().stream()
+            .filter(line -> isSupplyPayment(line.getPaymentType())).toList();
+        if (supplyLines.size() > 1 && supplyLines.stream().anyMatch(line -> line.getPaymentType() == PaymentTypeEnum.SUPPLIES_GLOBAL)) {
+            throw new IllegalArgumentException("El abono global de suministros debe enviarse en una sola linea");
+        }
         if (CollectionUtils.isNotEmpty(pagoRepository.findByFechaAndCedula(request.getDate(), user.getNumberId()))) {
             throw new IllegalArgumentException("Payments already registered for user");
         }
@@ -88,13 +94,22 @@ public class PaymentService {
             }
         }
 
-        persistPayments(request, user, pagoDtos, savingRequests, contributionPaymentRequests);
+        persistPayments(request, pagoDtos, savingRequests, contributionPaymentRequests);
 
         return buildPaymentResponse(user, totalPaid, paymentStatuses);
     }
 
+    private boolean isSupplyPayment(PaymentTypeEnum type) {
+        return type == PaymentTypeEnum.SUPPLIES || type == PaymentTypeEnum.SUPPLIES_GLOBAL;
+    }
+
     private User getUser(Integer userId) {
         return userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("Invalid user ID"));
+    }
+
+    private User lockUserForMultipayment(Integer userId) {
+        return userRepository.lockForMultipayment(userId)
             .orElseThrow(() -> new IllegalArgumentException("Invalid user ID"));
     }
 
@@ -105,6 +120,17 @@ public class PaymentService {
         status.setPaymentType(paymentDetail.getPaymentType());
         status.setReferenceId(paymentDetail.getReferenceId());
         status.setAmount(paymentDetail.getAmount());
+        if (isSupplyPayment(paymentDetail.getPaymentType())) {
+            var referenceId = paymentDetail.getReferenceId();
+            if ((paymentDetail.getPaymentType() == PaymentTypeEnum.SUPPLIES_GLOBAL) != (referenceId == null)) {
+                throw new IllegalArgumentException("Usa el abono global de suministros o indica un suministro valido");
+            }
+            // Propagate failures so a rejected allocation rolls back the entire multipayment.
+            supplyService.registerMultipayment(user, referenceId, paymentDetail.getAmount(), date);
+            status.setStatus("SUCCESS");
+            status.setMessage("Payment processed successfully");
+            return status;
+        }
         try {
             processByType(user, date, paymentDetail, pagoDtos, savingRequests,
                 contributionPaymentRequests);
@@ -125,7 +151,6 @@ public class PaymentService {
                 processContribution(user, date, paymentDetail, pagoDtos, contributionPaymentRequests);
             case SAVING, PARTNER_SAVING, CHILDRENS_SAVING ->
                 processSaving(user, date, paymentDetail, pagoDtos, savingRequests);
-            case SUPPLIES -> processSupplies(user, date, paymentDetail, pagoDtos);
             case LOAN_INTEREST_PAYMENT -> processLoanInterest(user, date, paymentDetail, pagoDtos);
             case LOAN_PAYMENT -> processLoan(user, date, paymentDetail, pagoDtos);
             case LOAN_SHARING -> processLoan(user, date, paymentDetail, pagoDtos);
@@ -158,31 +183,6 @@ public class PaymentService {
         savingRequests.add(getSavingRequest(paymentDetail.getAmount(), date, targetAssociateId));
         log.info("saving dto");
         pagoDtos.add(buildPagoDto(user, date, paymentDetail.getAmount(), TipoPagoEnum.AHORRO));
-    }
-
-    private void processSupplies(User user, LocalDate date, PaymentDetail paymentDetail,
-                                 List<PagoDto> pagoDtos) {
-        if (paymentDetail.getAmount() == null || paymentDetail.getAmount().compareTo(BigDecimal.ZERO) <= 0
-            || paymentDetail.getAmount().stripTrailingZeros().scale() > 2) {
-            throw new IllegalArgumentException("El abono debe ser positivo y tener hasta dos decimales");
-        }
-        if (paymentDetail.getReferenceId() != null) {
-            processSuppliesPayment(user.getUserId(), paymentDetail, date);
-        } else {
-            // Legacy unlinked defaults remain cash payments; never assign them to a new order.
-            var legacySupply = supplyService.getSuppliesByUser(user.getUserId()).stream()
-                .filter(supply -> supply.getSupplyBalance() != null
-                    && supply.getSupplyBalance().compareTo(BigDecimal.ZERO) > 0)
-                .filter(supply -> lubricantOrderRepository.findBySupplyId(supply.getSupplyId()).isEmpty())
-                .findFirst();
-            if (legacySupply.isPresent()) {
-                var legacyPayment = new PaymentDetail();
-                legacyPayment.setReferenceId(legacySupply.get().getSupplyId());
-                legacyPayment.setAmount(paymentDetail.getAmount());
-                processSuppliesPayment(user.getUserId(), legacyPayment, date);
-            }
-        }
-        pagoDtos.add(buildPagoDto(user, date, paymentDetail, TipoPagoEnum.SUMINISTROS));
     }
 
     private void processForecastFundPayment(User user, LocalDate date, PaymentDetail paymentDetail,
@@ -253,7 +253,7 @@ public class PaymentService {
             .build();
     }
 
-    private void persistPayments(PaymentRequest request, User user, List<PagoDto> pagoDtos,
+    private void persistPayments(PaymentRequest request, List<PagoDto> pagoDtos,
                                  List<SavingRequest> savingRequests,
                                  List<ContributionPaymentRequest> contributionPaymentRequests) {
         if (!savingRequests.isEmpty()) {
@@ -262,21 +262,17 @@ public class PaymentService {
         if (!contributionPaymentRequests.isEmpty()) {
             contributionPaymentService.saveList(contributionPaymentRequests);
         }
-        if (pagoRepository.findByFechaAndCedula(request.getDate(), user.getNumberId())
-            .isEmpty()) {
-            pagoRepository.saveAll(pagoDtos.stream()
-                .map(pagoMapper::toEntity)
-                .toList());
-            pagoDtos.stream()
-                .filter(pagoDto -> Set.of(TipoPagoEnum.AHORRO, TipoPagoEnum.ABONO_CAPITAL,
-                        TipoPagoEnum.ABONO_INTERES, TipoPagoEnum.PRESTAMOS_2
-                        )
-                    .contains(pagoDto.getTipoPago()))
-                .forEach(
-                    pagoDto -> fundsService.saveFunds(BigDecimal.valueOf(pagoDto.getMonto()), FundsType.ADD));
-        } else {
-            throw new IllegalArgumentException("Payments already registered for user");
-        }
+        if (pagoDtos.isEmpty()) return;
+        pagoRepository.saveAll(pagoDtos.stream()
+            .map(pagoMapper::toEntity)
+            .toList());
+        pagoDtos.stream()
+            .filter(pagoDto -> Set.of(TipoPagoEnum.AHORRO, TipoPagoEnum.ABONO_CAPITAL,
+                    TipoPagoEnum.ABONO_INTERES, TipoPagoEnum.PRESTAMOS_2
+                    )
+                .contains(pagoDto.getTipoPago()))
+            .forEach(
+                pagoDto -> fundsService.saveFunds(BigDecimal.valueOf(pagoDto.getMonto()), FundsType.ADD));
         log.info("Pagos {}", pagoDtos);
     }
 
@@ -357,29 +353,6 @@ public class PaymentService {
             case LOAN_SHARING, LOAN_SHARING_INTEREST -> "Compartir";
             default -> null;
         };
-    }
-
-    private void processSuppliesPayment(Integer userId, PaymentDetail paymentDetail, LocalDate date) {
-        var supplies = supplyService.getSuppliesByUser(userId);
-        var supply = paymentDetail.getReferenceId() != null
-            ? supplies.stream()
-                .filter(supplyResponse -> Objects.equals(
-                    supplyResponse.getSupplyId(), paymentDetail.getReferenceId()))
-                .findFirst()
-            : supplies.stream()
-                .filter(supplyResponse -> supplyResponse.getSupplyBalance() != null
-                    && supplyResponse.getSupplyBalance().compareTo(BigDecimal.ZERO) > 0)
-                .findFirst();
-        if (supply.isEmpty()) {
-            throw new IllegalArgumentException("Active supply not found for payment");
-        }
-
-        var request = new SupplyPaymentRequest();
-        request.setPaymentDate(date);
-        request.setSupplyId(supply.get()
-            .getSupplyId());
-        request.setAmount(paymentDetail.getAmount());
-        supplyService.registerPayment(request);
     }
 
     private void processOthersPayment(User user, PaymentDetail paymentDetail, LocalDate date, List<PagoDto> pagos) {
@@ -649,7 +622,7 @@ public class PaymentService {
     public PaymentReversalResponse reversePayments(PaymentReversalRequest request) {
         log.info("Starting payment reversal for userId: {}, date: {}", request.userId(), request.date());
         
-        var user = getUser(request.userId());
+        var user = lockUserForMultipayment(request.userId());
         
         // 1. Buscar todos los pagos del usuario en la fecha específica
         var pagosToReverse = pagoRepository.findByFechaAndCedula(request.date(), user.getNumberId());
@@ -716,7 +689,12 @@ public class PaymentService {
         }
 
         reverseLoanPayments(user, date);
-        reverseSupplyPayments(user, date);
+        var supplyPagoIds = pagosToReverse.stream()
+            .filter(pago -> pago.getTipoPago() == TipoPagoEnum.SUMINISTROS)
+            .map(Pago::getId).toList();
+        if (!supplyPagoIds.isEmpty()) {
+            supplyService.reverseMultipayment(user, date, supplyPagoIds);
+        }
 
         // Eliminar otros pagos
         var otherPayments = otherPaymentRepository.findByUserAndPaymentDate(user, date);
@@ -774,14 +752,6 @@ public class PaymentService {
         }
     }
 
-    private void reverseSupplyPayments(User user, LocalDate date) {
-        var supplyPayments = supplyPaymentRepository.findByUserAndPaymentDate(user, date);
-        if (!supplyPayments.isEmpty()) {
-            supplyService.reversePayments(supplyPayments);
-            log.info("Deleted {} supply payment records", supplyPayments.size());
-        }
-    }
-    
     private void recordPaymentReversal(Integer userId, BigDecimal totalAmount, String reason) {
         log.info("Recording payment reversal in history for userId: {}, amount: {}", userId, totalAmount);
         

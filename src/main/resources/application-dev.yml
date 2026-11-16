@@ -2,7 +2,7 @@ spring:
   datasource:
     url: ${DATASOURCE_URL:jdbc:mysql://127.0.0.1:3307/calch}
     username: ${DATASOURCE_USERNAME:root}
-    password: ${DATASOURCE_PASSWORD:root}
+    password: ${DATASOURCE_PASSWORD:Coki447.}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hibernate:
       ddl-auto: none
@@ -17,7 +17,7 @@ spring:
       connection-timeout: 50000
 
 server:
-  port: 8081
+  port: 8080
 
 jwt:
   secretKey: vj7/hMQe+EryZ/3V4O8MjT6Vib1FEivj1xwxIZTam4M=

@@ -7,6 +7,7 @@ import com.ajustadoati.sc.adapter.rest.dto.request.PaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum;
 import com.ajustadoati.sc.adapter.rest.dto.response.PaymentResponse;
 import com.ajustadoati.sc.adapter.rest.repository.ContributionTypeRepository;
+import com.ajustadoati.sc.adapter.rest.repository.DefaultPaymentRepository;
 import com.ajustadoati.sc.adapter.rest.repository.PagoRepository;
 import com.ajustadoati.sc.adapter.rest.repository.SavingRepository;
 import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
@@ -31,6 +32,9 @@ class PaymentServiceTest {
 
   @InjectMocks
   private PaymentService paymentService;
+
+  @Mock private DefaultPaymentRepository defaults;
+  @Mock private FundsService fundsService;
 
   @Mock
   private ContributionTypeRepository contributionTypeRepository;
@@ -78,7 +82,7 @@ class PaymentServiceTest {
     user.setUserId(userId);
     user.setNumberId("12345");
 
-    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+    when(userRepository.lockForMultipayment(userId)).thenReturn(Optional.of(user));
 
     // Act
     PaymentResponse response = paymentService.processPayments(paymentRequest);
@@ -104,7 +108,7 @@ class PaymentServiceTest {
     paymentRequest.setUserId(userId);
     paymentRequest.setDate(LocalDate.now());
 
-    when(userRepository.findById(userId)).thenReturn(Optional.empty());
+    when(userRepository.lockForMultipayment(userId)).thenReturn(Optional.empty());
 
     // Act & Assert
     assertThrows(IllegalArgumentException.class,

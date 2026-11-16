@@ -1,22 +1,26 @@
 package com.ajustadoati.sc.application.service;
 
-import com.ajustadoati.sc.adapter.rest.dto.request.*;
+import com.ajustadoati.sc.adapter.rest.dto.request.PaymentDetail;
+import com.ajustadoati.sc.adapter.rest.dto.request.PaymentRequest;
 import com.ajustadoati.sc.adapter.rest.dto.request.enums.PaymentTypeEnum;
-import com.ajustadoati.sc.adapter.rest.dto.response.SupplyResponse;
-import com.ajustadoati.sc.adapter.rest.repository.*;
-import com.ajustadoati.sc.application.mapper.PagoMapper;
-import com.ajustadoati.sc.domain.Pago;
+import com.ajustadoati.sc.adapter.rest.repository.DefaultPaymentRepository;
+import com.ajustadoati.sc.adapter.rest.repository.PagoRepository;
+import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
 import com.ajustadoati.sc.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,77 +28,65 @@ class PaymentServiceSupplyTest {
   @InjectMocks PaymentService service;
   @Mock UserRepository users;
   @Mock PagoRepository pagos;
-  @Mock PagoMapper mapper;
+  @Mock DefaultPaymentRepository defaults;
   @Mock SupplyService supplies;
-  @Mock LubricantOrderRepository orders;
+  private final User user = User.builder().userId(1).numberId("test-supply").build();
+  private final LocalDate date = LocalDate.of(2026, 11, 16);
+  private final BigDecimal amount = new BigDecimal("100.00");
 
   @BeforeEach void setup() {
-    var user = new User();
-    user.setUserId(1);
-    user.setNumberId("test-supply");
-    when(users.findById(1)).thenReturn(Optional.of(user));
+    when(users.lockForMultipayment(1)).thenReturn(Optional.of(user));
   }
 
-  private PaymentRequest request(Integer referenceId) {
+  private PaymentRequest request(PaymentTypeEnum type, Integer referenceId) {
     var detail = new PaymentDetail();
-    detail.setPaymentType(PaymentTypeEnum.SUPPLIES);
+    detail.setPaymentType(type);
     detail.setReferenceId(referenceId);
-    detail.setAmount(new BigDecimal("10.00"));
+    detail.setAmount(amount);
     var request = new PaymentRequest();
     request.setUserId(1);
-    request.setDate(LocalDate.of(2026, 10, 28));
+    request.setDate(date);
     request.setPayments(List.of(detail));
     return request;
   }
 
-  private SupplyResponse supply(int id) {
-    var response = new SupplyResponse();
-    response.setSupplyId(id);
-    response.setSupplyBalance(new BigDecimal("100.00"));
-    return response;
-  }
-
-  @Test void paysTheExplicitDebtInsteadOfTheFirst() {
-    when(supplies.getSuppliesByUser(1)).thenReturn(List.of(supply(10), supply(20)));
-    when(mapper.toEntity(any())).thenReturn(new Pago());
-    var result = service.processPayments(request(20));
+  @Test void delegatesOneGlobalAmount() {
+    var result = service.processPayments(request(PaymentTypeEnum.SUPPLIES_GLOBAL, null));
+    assertEquals(amount, result.getTotalPaid());
     assertEquals("SUCCESS", result.getPaymentStatuses().getFirst().getStatus());
-    verify(supplies).registerPayment(argThat(payment -> payment.getSupplyId()==20
-      && payment.getAmount().compareTo(new BigDecimal("10.00"))==0));
+    verify(supplies).registerMultipayment(user, null, amount, date);
+    verify(pagos, never()).saveAll(argThat(values -> values.iterator().hasNext()));
   }
 
-  @Test void failedDebtDoesNotCreateIncome() {
-    when(supplies.getSuppliesByUser(1)).thenReturn(List.of(supply(10)));
-    doThrow(new IllegalArgumentException("exceeds balance")).when(supplies).registerPayment(any());
-    var result = service.processPayments(request(10));
-    assertEquals("FAILURE", result.getPaymentStatuses().getFirst().getStatus());
-    assertEquals(0, result.getTotalPaid().signum());
-    verifyNoInteractions(mapper);
+  @Test void supportsTheExplicitPaymentContract() {
+    service.processPayments(request(PaymentTypeEnum.SUPPLIES, 20));
+    verify(supplies).registerMultipayment(user, 20, amount, date);
   }
 
-  @Test void refusesAnotherUsersDebt() {
-    when(supplies.getSuppliesByUser(1)).thenReturn(List.of(supply(10)));
-    var result = service.processPayments(request(99));
-    assertEquals("FAILURE", result.getPaymentStatuses().getFirst().getStatus());
-    verify(supplies, never()).registerPayment(any());
-    verifyNoInteractions(mapper);
+  @Test void blocksTheEntireRequestWhenLegacyDefaultRemains() {
+    when(defaults.countLegacySupplyDefaults(user)).thenReturn(1L);
+    assertThrows(IllegalArgumentException.class,
+      () -> service.processPayments(request(PaymentTypeEnum.SUPPLIES_GLOBAL, null)));
+    verifyNoInteractions(pagos, supplies);
   }
 
-  @Test void keepsUnlinkedLegacyDefaultsWithoutCreatingDebt() {
-    when(supplies.getSuppliesByUser(1)).thenReturn(List.of());
-    when(mapper.toEntity(any())).thenReturn(new Pago());
-    var result = service.processPayments(request(null));
-    assertEquals("SUCCESS", result.getPaymentStatuses().getFirst().getStatus());
-    verify(supplies, never()).registerPayment(any());
-    verify(mapper).toEntity(any());
+  @Test void rejectsUnlinkedLegacyPaymentInsteadOfTreatingItAsGlobal() {
+    assertThrows(IllegalArgumentException.class, () -> service.processPayments(request(PaymentTypeEnum.SUPPLIES, null)));
+    verifyNoInteractions(supplies);
   }
 
-  @Test void legacyDefaultNeverPaysAFinancedOrderImplicitly() {
-    when(supplies.getSuppliesByUser(1)).thenReturn(List.of(supply(10)));
-    when(orders.findBySupplyId(10)).thenReturn(Optional.of(new com.ajustadoati.sc.domain.LubricantOrder()));
-    when(mapper.toEntity(any())).thenReturn(new Pago());
-    var result = service.processPayments(request(null));
-    assertEquals("SUCCESS", result.getPaymentStatuses().getFirst().getStatus());
-    verify(supplies, never()).registerPayment(any());
+  @Test void rejectsGlobalMixedWithAnotherSupplyLine() {
+    var request = request(PaymentTypeEnum.SUPPLIES_GLOBAL, null);
+    request.setPayments(List.of(request.getPayments().getFirst(),
+      request(PaymentTypeEnum.SUPPLIES, 20).getPayments().getFirst()));
+    assertThrows(IllegalArgumentException.class, () -> service.processPayments(request));
+    verifyNoInteractions(pagos, supplies);
+  }
+
+  @Test void propagatesInvalidAllocationRatherThanPersistingAPartialMultipayment() {
+    doThrow(new IllegalArgumentException("exceeds balance")).when(supplies).registerMultipayment(user, null, amount, date);
+    assertThrows(IllegalArgumentException.class,
+      () -> service.processPayments(request(PaymentTypeEnum.SUPPLIES_GLOBAL, null)));
+    verify(pagos, never()).saveAll(any());
   }
 }

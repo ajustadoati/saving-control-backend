@@ -1,13 +1,10 @@
 package com.ajustadoati.sc.application.service;
 
 import com.ajustadoati.sc.adapter.rest.dto.request.DefaultPaymentRequest;
-import com.ajustadoati.sc.adapter.rest.dto.request.SavingRequest;
 import com.ajustadoati.sc.adapter.rest.repository.DefaultPaymentRepository;
-import com.ajustadoati.sc.adapter.rest.repository.SavingRepository;
 import com.ajustadoati.sc.adapter.rest.repository.UserRepository;
 import com.ajustadoati.sc.domain.DefaultPayment;
-import com.ajustadoati.sc.domain.Saving;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Locale;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,7 +15,6 @@ import org.springframework.stereotype.Service;
  * @author rojasric
  */
 @Service
-@Slf4j
 public class DefaultPaymentService {
 
   private final DefaultPaymentRepository defaultPaymentRepository;
@@ -33,6 +29,10 @@ public class DefaultPaymentService {
 
   public DefaultPayment addDefaultPayment(Integer userId,
       DefaultPaymentRequest defaultPaymentRequest) {
+    var name = defaultPaymentRequest.getDefaultPaymentName();
+    if (name != null && name.trim().toLowerCase(Locale.ROOT).startsWith("suministro")) {
+      throw new IllegalArgumentException("Los suministros ya no se configuran como pagos por defecto");
+    }
     var user = userRepository
         .findById(userId)
         .orElseThrow();
@@ -55,11 +55,9 @@ public class DefaultPaymentService {
   }
 
   public void deleteDefaultPayment(Integer userId, Integer id){
-    userRepository
-        .findById(userId)
-        .orElseThrow();
-
-    defaultPaymentRepository.deleteById(id);
+    var payment = defaultPaymentRepository.findByIdAndUser_UserId(id, userId)
+        .orElseThrow(() -> new IllegalArgumentException("El pago por defecto no pertenece al socio"));
+    defaultPaymentRepository.delete(payment);
   }
 
 }

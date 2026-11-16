@@ -7,9 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 public interface SupplyPaymentRepository extends JpaRepository<SupplyPayment, Integer> {
+  List<SupplyPayment> findByMultipaymentPago_IdIn(Collection<Long> ids);
+
   List<SupplyPayment> findBySupply_SupplyId(Integer supplyId);
   
   @Query("SELECT sp FROM SupplyPayment sp WHERE sp.supply.user = :user AND sp.paymentDate = :paymentDate")

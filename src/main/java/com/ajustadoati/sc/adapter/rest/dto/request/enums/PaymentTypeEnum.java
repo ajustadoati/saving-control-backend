@@ -7,6 +7,7 @@ public enum PaymentTypeEnum {
   SHARED_CONTRIBUTION("Compartir"),
   ADMINISTRATIVE("Administrativo"),
   SUPPLIES("Suministros"),
+  SUPPLIES_GLOBAL("Abono global de suministros"),
   LOAN_INTEREST_PAYMENT("Interés de préstamo"),
   LOAN_PAYMENT("Abono a préstamo"),
   LOAN_SHARING("Abono a préstamo compartir"),
